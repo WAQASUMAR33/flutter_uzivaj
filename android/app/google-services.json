@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "995140505639",
+    "project_id": "rapidtechpro-6e103",
+    "storage_bucket": "rapidtechpro-6e103.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:995140505639:android:2cc5e7b659ee94d1977e02",
+        "android_client_info": {
+          "package_name": "rtp.rapidtechpro.uzvaj_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "995140505639-oca8sdulbhvsdlj78qitg4hvq41efcvl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYv72aVNAV74kMFh4tb3SLZnkYJgZdQTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "995140505639-oca8sdulbhvsdlj78qitg4hvq41efcvl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "995140505639-3shkrkjag81m8k1bo1ni68i1d86jjm1j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.cropapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
