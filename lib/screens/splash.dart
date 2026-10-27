@@ -34,15 +34,15 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Entrance animation (1100ms)
+    // 1. Entrance animation (1800ms — slower, elegant convergent glide)
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 1800),
     );
 
     // Smiley icon glides down from the TOP into center
     _smileySlide = Tween<Offset>(
-      begin: const Offset(0.0, -2.5),
+      begin: const Offset(0.0, -1.6),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _entranceController,
@@ -52,18 +52,18 @@ class _SplashScreenState extends State<SplashScreen>
     _smileyFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
       ),
     );
 
     _smileyDraw = CurvedAnimation(
       parent: _entranceController,
-      curve: const Interval(0.15, 0.95, curve: Curves.easeInOutCubic),
+      curve: const Interval(0.1, 0.9, curve: Curves.easeInOutCubic),
     );
 
     // Uživaj logo glides up from the BOTTOM into center
     _logoSlide = Tween<Offset>(
-      begin: const Offset(0.0, 2.5),
+      begin: const Offset(0.0, 1.6),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _entranceController,
@@ -73,11 +73,11 @@ class _SplashScreenState extends State<SplashScreen>
     _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
       ),
     );
 
-    _logoScale = Tween<double>(begin: 0.88, end: 1.0).animate(
+    _logoScale = Tween<double>(begin: 0.9, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
         curve: Curves.easeOutCubic,
@@ -96,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Sequence: Entrance finishes -> hold briefly -> trigger exit fade out
     _entranceController.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        Future.delayed(const Duration(milliseconds: 750), () {
+        Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) _exitController.forward();
         });
       }
