@@ -149,9 +149,42 @@ class _TermsScreenState extends State<TermsScreen> {
                         displayHtml ?? '',
                         textStyle: const TextStyle(
                           fontSize: 14,
-                          height: 1.6,
-                          color: Colors.black87,
+                          height: 1.65,
+                          color: Color(0xFF334155),
                         ),
+                        customStylesBuilder: (element) {
+                          if (element.localName == 'h2') {
+                            return {
+                              'font-weight': '700',
+                              'font-size': '17px',
+                              'margin-top': '22px',
+                              'margin-bottom': '8px',
+                              'color': '#0f172a',
+                            };
+                          }
+                          if (element.localName == 'h3') {
+                            return {
+                              'font-weight': '600',
+                              'font-size': '15px',
+                              'margin-top': '16px',
+                              'margin-bottom': '6px',
+                              'color': '#1e293b',
+                            };
+                          }
+                          if (element.localName == 'p') {
+                            return {'margin-bottom': '12px'};
+                          }
+                          if (element.localName == 'ul' || element.localName == 'ol') {
+                            return {'margin-bottom': '14px', 'padding-left': '18px'};
+                          }
+                          if (element.localName == 'li') {
+                            return {'margin-bottom': '6px'};
+                          }
+                          if (element.localName == 'strong') {
+                            return {'font-weight': '700', 'color': '#0f172a'};
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
