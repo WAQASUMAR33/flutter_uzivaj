@@ -45,7 +45,7 @@ class SignupProvider extends ChangeNotifier {
       final credential = await _authService.signUpWithEmail(email, password);
       final uid = credential.user!.uid;
 
-      final userData = await _apiService.register(
+      await _apiService.register(
         fullname: fullname,
         email: email,
         password: password,
@@ -56,7 +56,11 @@ class SignupProvider extends ChangeNotifier {
         uid: uid,
       );
 
-      await _storage.saveUser(userData);
+      // Do not save user session as logged in yet; email verification is required
+      try {
+        await _authService.signOut();
+      } catch (_) {}
+      await _storage.clearUser();
 
       _isLoading = false;
       notifyListeners();

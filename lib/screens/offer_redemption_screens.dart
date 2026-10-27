@@ -89,8 +89,18 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
           ),
         ),
       );
-    } catch (_) {
-      _showInvalidCode();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _pin = '';
+        final msg = e.toString().toLowerCase();
+        if (msg.contains('already')) {
+          _errorMessage = AppStrings.of(context).offerAlreadyUsed;
+        } else {
+          _errorMessage = AppStrings.of(context).codeIsInvalid;
+        }
+      });
     }
   }
 

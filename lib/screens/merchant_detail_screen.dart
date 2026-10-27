@@ -38,6 +38,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
   // Default locked until we confirm an active subscription.
   bool _offersLocked = true;
   bool _loadingAccess = true;
+  Set<int> _redeemedOfferIds = {};
 
   static const _transitionDuration = Duration(milliseconds: 300);
 
@@ -50,9 +51,10 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
   }
 
   /// Unlocks offers only for a logged-in user with an ACTIVE subscription.
-  /// Guests (no stored user) and non-subscribers stay locked.
+  /// Also loads the user's redemption history so used offers are disabled.
   Future<void> _loadAccessState() async {
     bool subscribed = false;
+    final Set<int> redeemed = {};
     try {
       final user = await UserStorageService().getUser();
       if (user != null) {
@@ -68,13 +70,38 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
             final status = await _api.getSubscriptionStatus(customerId: id);
             if (status['subscribed'] == true) subscribed = true;
           } catch (_) {}
+
+          try {
+            final historyData = await _api.getRedeemHistory(customerId: id);
+            final redemptions = (historyData['redemptions'] as List?) ?? [];
+            for (final item in redemptions) {
+              final offId = (item['offerId'] as num?)?.toInt() ??
+                            (item['offer']?['id'] as num?)?.toInt();
+              if (offId != null) {
+                redeemed.add(offId);
+              }
+            }
+          } catch (_) {}
         }
       }
     } catch (_) {}
+
+    // Also pick up any offers explicitly tagged as isRedeemed in merchantData
+    for (final offer in _offers) {
+      if (offer['isRedeemed'] == true) {
+        final offId = (offer['id'] as num?)?.toInt();
+        if (offId != null) redeemed.add(offId);
+      }
+    }
+
     if (mounted) {
       setState(() {
         _offersLocked = !subscribed;
+        _redeemedOfferIds = redeemed;
         _loadingAccess = false;
+        if (_selectedOfferId != null && _redeemedOfferIds.contains(_selectedOfferId)) {
+          _selectedOfferId = null;
+        }
       });
     }
   }
@@ -126,6 +153,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
       }
     }
     if (selectedOffer != null) {
+      final offer = selectedOffer;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -133,9 +161,9 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
             final isEn = Provider.of<LocaleProvider>(context, listen: false).isEnglish;
             return PinEntryScreen(
               merchantName: _merchantData[isEn ? 'nameEn' : 'nameHr'] as String? ?? _merchantData['name'] as String? ?? '',
-              offerTitle: selectedOffer![isEn ? 'titleEn' : 'titleHr'] as String? ?? selectedOffer!['title'] as String? ?? '',
+              offerTitle: offer[isEn ? 'titleEn' : 'titleHr'] as String? ?? offer['title'] as String? ?? '',
               merchantId: _merchantData['id'] as int? ?? 0,
-              offerId: selectedOffer['id'] as int? ?? 0,
+              offerId: offer['id'] as int? ?? 0,
               onReviewSubmitted: _updateMerchantData,
             );
           },
@@ -145,6 +173,8 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
           setState(() {
             _selectedOfferId = null;
           });
+          _loadAccessState();
+          _refresh();
         }
       });
     }
@@ -207,7 +237,9 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
 
   Future<void> _refresh() async {
     try {
-      final data = await _api.getMerchants();
+      final user = await UserStorageService().getUser();
+      final id = user?['id'] as int?;
+      final data = await _api.getMerchants(customerId: id);
       final merchants = data['merchants'] as List?;
       if (merchants != null) {
         final updated = merchants.firstWhere(
@@ -219,6 +251,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
         }
       }
     } catch (_) {}
+    await _loadAccessState();
   }
 
   List<Map<String, dynamic>> get _offers =>
@@ -712,6 +745,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                         else
                           ..._offers.map((offer) {
                             final offerId = offer['id'] as int? ?? 0;
+                            final isRedeemed = _redeemedOfferIds.contains(offerId) || offer['isRedeemed'] == true;
                             final isSelected = _selectedOfferId == offerId;
                             return _OfferCard(
                               title: offer[isEn ? 'titleEn' : 'titleHr'] as String? ?? offer['title'] as String? ?? '',
@@ -721,8 +755,9 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                               discountValue: offer['discountValue'] as num?,
                               isSelected: isSelected,
                               locked: _offersLocked,
+                              isRedeemed: isRedeemed,
                               onSelect: () {
-                                if (_offersLocked) return;
+                                if (_offersLocked || isRedeemed) return;
                                 setState(() {
                                   _selectedOfferId = offerId;
                                 });
@@ -877,6 +912,7 @@ class _OfferCard extends StatelessWidget {
   final num? discountValue;
   final bool isSelected;
   final bool locked;
+  final bool isRedeemed;
   final VoidCallback? onSelect;
 
   const _OfferCard({
@@ -885,6 +921,7 @@ class _OfferCard extends StatelessWidget {
     required this.discount,
     required this.isSelected,
     this.locked = false,
+    this.isRedeemed = false,
     this.offerAmount,
     this.discountValue,
     this.onSelect,
@@ -892,25 +929,30 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isSelected ? Apptheme.bluecolor : Apptheme.blackcolor;
-    final subColor = Colors.grey.shade600;
+    final l = AppStrings.of(context);
+    final textColor = isRedeemed
+        ? Colors.grey.shade500
+        : (isSelected ? Apptheme.bluecolor : Apptheme.blackcolor);
+    final subColor = isRedeemed ? Colors.grey.shade400 : Colors.grey.shade600;
 
-    // Locked (guest / not subscribed): dim the whole card + block taps.
+    // Locked or already redeemed: block taps
     final card = GestureDetector(
-      onTap: locked ? null : onSelect,
+      onTap: (locked || isRedeemed) ? null : onSelect,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isRedeemed ? Colors.grey.shade50 : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? Apptheme.bluecolor : Colors.grey.shade200,
+            color: isSelected
+                ? Apptheme.bluecolor
+                : (isRedeemed ? Colors.grey.shade300 : Colors.grey.shade200),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: isRedeemed ? 0.01 : 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -933,19 +975,42 @@ class _OfferCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Apptheme.bluecolor.withValues(alpha: 0.1),
+                          color: isRedeemed
+                              ? Colors.grey.shade200
+                              : Apptheme.bluecolor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           discount,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Apptheme.bluecolor,
+                            color: isRedeemed ? Colors.grey.shade600 : Apptheme.bluecolor,
                           ),
                         ),
                       ),
-                      if (offerAmount != null) ...[
+                      if (isRedeemed) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            l.usedLabel,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
+                      ] else if (offerAmount != null) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -976,6 +1041,8 @@ class _OfferCard extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: textColor,
+                      decoration: isRedeemed ? TextDecoration.lineThrough : null,
+                      decorationColor: Colors.grey.shade400,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -985,7 +1052,7 @@ class _OfferCard extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: subColor),
                   ),
                   // Savings line
-                  if (discountValue != null) ...[
+                  if (discountValue != null && !isRedeemed) ...[
                     const SizedBox(height: 5),
                     Row(
                       children: [
@@ -1010,31 +1077,59 @@ class _OfferCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Right: lock icon when locked, else selection indicator
-            locked
-                ? Icon(Icons.lock_outline, size: 22, color: Colors.grey.shade400)
-                : Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: isSelected ? Apptheme.bluecolor : Colors.white,
-                      border: Border.all(
-                        color: isSelected
-                            ? Apptheme.bluecolor
-                            : Colors.grey.shade400,
-                        width: 2,
+            // Right: lock icon when locked, or used badge, else selection indicator
+            if (isRedeemed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      l.usedLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade600,
                       ),
-                      shape: BoxShape.circle,
                     ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 16)
-                        : null,
+                  ],
+                ),
+              )
+            else if (locked)
+              Icon(Icons.lock_outline, size: 22, color: Colors.grey.shade400)
+            else
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: isSelected ? Apptheme.bluecolor : Colors.white,
+                  border: Border.all(
+                    color: isSelected
+                        ? Apptheme.bluecolor
+                        : Colors.grey.shade400,
+                    width: 2,
                   ),
+                  shape: BoxShape.circle,
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    : null,
+              ),
           ],
         ),
       ),
     );
 
-    return Opacity(opacity: locked ? 0.5 : 1.0, child: card);
+    return Opacity(
+      opacity: isRedeemed ? 0.65 : (locked ? 0.5 : 1.0),
+      child: card,
+    );
   }
 }

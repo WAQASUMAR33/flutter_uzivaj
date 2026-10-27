@@ -429,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class _SocialButton extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final FaIconData icon;
   final Color iconColor;
   final bool loading;
   final bool disabled;
@@ -478,7 +478,7 @@ class _SocialButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black45),
               )
             else
-              Icon(
+              FaIcon(
                 icon,
                 size: 18,
                 color: disabled ? Colors.grey.shade300 : iconColor,
@@ -499,140 +499,7 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-// ── Forgot password dialog ─────────────────────────────────────────────────────
 
-class _ForgotPasswordDialog extends StatefulWidget {
-  final String initialEmail;
-
-  const _ForgotPasswordDialog({this.initialEmail = ''});
-
-  @override
-  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
-}
-
-class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _emailController;
-  bool _isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _emailController = TextEditingController(text: widget.initialEmail);
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final l = AppStrings.of(context);
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isSubmitting = true);
-
-    // TODO: Wire up the custom forgot-password API endpoint here.
-    // Add a method to ApiService (e.g. POST /api/customers/forgot-password
-    // with { "email": _emailController.text.trim() }), call it via
-    // LoginProvider, and surface any error in a SnackBar. For now we just
-    // simulate a successful request.
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l.resetLinkSent)),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppStrings.of(context);
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        l.resetPasswordTitle,
-        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
-      ),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l.resetPasswordDesc,
-              style: const TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autofocus: true,
-              enabled: !_isSubmitting,
-              onFieldSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                hintText: 'your@email.com',
-                prefixIcon: const Icon(Icons.mail_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.grey),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return l.emailRequired;
-                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim()))
-                  return l.emailInvalid;
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: Text(
-            l.cancel,
-            style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _isSubmitting ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Apptheme.bluecolor,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: _isSubmitting
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                )
-              : Text(
-                  l.sendResetLink,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-}
 
 // ── Language toggle button ─────────────────────────────────────────────────────
 

@@ -6,8 +6,25 @@ class AppStrings {
   final bool _isHR;
   const AppStrings._(this._isHR);
 
-  static AppStrings of(BuildContext context) {
-    final code = context.watch<LocaleProvider>().locale.languageCode;
+  static AppStrings of(BuildContext context, {bool? listen}) {
+    String code = 'hr';
+    try {
+      final shouldListen = listen ?? (context.owner?.debugBuilding == true);
+      final provider = shouldListen
+          ? Provider.of<LocaleProvider>(context, listen: true)
+          : Provider.of<LocaleProvider>(context, listen: false);
+      code = provider.locale.languageCode;
+    } catch (_) {
+      try {
+        code = Provider.of<LocaleProvider>(context, listen: false).locale.languageCode;
+      } catch (_) {
+        try {
+          code = Localizations.localeOf(context).languageCode;
+        } catch (_) {
+          code = 'hr';
+        }
+      }
+    }
     return AppStrings._(code == 'hr');
   }
 
@@ -153,8 +170,8 @@ class AppStrings {
   String get mobileRequired =>
       _isHR ? 'Broj mobitela je obavezan' : 'Mobile number is required';
   String get mobileInvalid => _isHR
-      ? 'Mora biti valjani broj (+385)'
-      : 'Must be a valid Croatia number (+385)';
+      ? 'Unesite valjani broj mobitela'
+      : 'Enter a valid mobile phone number';
   String get dobRequired =>
       _isHR ? 'Datum rođenja je obavezan' : 'Date of birth is required';
   String get nationalityRequired =>
@@ -337,6 +354,8 @@ class AppStrings {
   String get usedLabel => _isHR ? 'ISKORIŠTENO' : 'USED';
   String get useLabel => _isHR ? 'KORISTI' : 'USE';
   String get saveBadge => _isHR ? 'Uštedi' : 'Save';
+  String get offerAlreadyUsed =>
+      _isHR ? 'Ova ponuda je već iskorištena' : 'This offer has already been used';
 
   // ── Promo Code ──────────────────────────────────────────────────────────────
   String get havePromoCode =>

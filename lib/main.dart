@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:provider/provider.dart';
 import '/providers/app_provider.dart';
 import '/providers/signup_provider.dart';
@@ -10,10 +11,27 @@ import '/firebaseOptions.dart';
 import '/providers/authProvider.dart';
 import '/screens/splash.dart';
 import '/utils/navigator_key.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_stripe/flutter_stripe.dart';
+import '/config/stripe_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    Stripe.publishableKey = StripeConfig.publishableKey;
+    if (!kIsWeb) {
+      await Stripe.instance.applySettings();
+    }
+  } catch (e) {
+    debugPrint('Stripe initialization error: $e');
+  }
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -40,6 +58,7 @@ class MyApp extends StatelessWidget {
       locale: locale,
       supportedLocales: const [Locale('hr'), Locale('en')],
       localizationsDelegates: const [
+        CountryLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

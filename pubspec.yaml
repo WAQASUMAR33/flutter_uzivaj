@@ -41,7 +41,7 @@ dependencies:
   provider:
   http:
   flutter_svg:
-  font_awesome_flutter: ^10.12.0
+  font_awesome_flutter: ^11.0.0
   google_sign_in:
   shared_preferences:
   country_picker: ^2.0.21
@@ -52,6 +52,7 @@ dependencies:
   flutter_widget_from_html_core: ^0.15.2
   url_launcher: ^6.3.2
   pinput: ^6.0.2
+  flutter_stripe: ^13.0.0
 
 dev_dependencies:
   flutter_test:

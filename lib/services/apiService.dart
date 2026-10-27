@@ -1,8 +1,16 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '/utils/navigator_key.dart';
 
 const String _baseUrl = 'https://uvizajapp.vercel.app';
+
+String get _devBaseUrl {
+  if (kIsWeb) return 'http://localhost:3001';
+  if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+  return 'http://localhost:3001';
+}
 
 class ApiService {
   Future<List<dynamic>> getCategories() async {
@@ -11,8 +19,11 @@ class ApiService {
     throw const ApiException('Failed to load categories');
   }
 
-  Future<Map<String, dynamic>> getMerchants() async {
-    final response = await _Http.get(Uri.parse('$_baseUrl/api/merchants'));
+  Future<Map<String, dynamic>> getMerchants({int? customerId}) async {
+    final uri = customerId != null
+        ? Uri.parse('$_baseUrl/api/merchants?customerId=$customerId')
+        : Uri.parse('$_baseUrl/api/merchants');
+    final response = await _Http.get(uri);
     if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
     throw const ApiException('Failed to load merchants');
   }
@@ -132,17 +143,34 @@ class ApiService {
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) return data;
-    throw ApiException(data['message']?.toString() ?? 'Login failed');
+    throw ApiException(data['error']?.toString() ?? data['message']?.toString() ?? 'Login failed');
   }
 
   Future<Map<String, dynamic>> getSubscriptionStatus({
     required int customerId,
   }) async {
-    final response = await _Http.post(
-      Uri.parse('$_baseUrl/api/subscriptions/status'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'customerId': customerId}),
-    );
+    http.Response response;
+    try {
+      response = await _Http.post(
+        Uri.parse('$_baseUrl/api/subscriptions/status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'customerId': customerId}),
+        checkInternet: false,
+      );
+      if (response.statusCode == 404) {
+        response = await _Http.post(
+          Uri.parse('$_devBaseUrl/api/subscriptions/status'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'customerId': customerId}),
+        );
+      }
+    } catch (_) {
+      response = await _Http.post(
+        Uri.parse('$_devBaseUrl/api/subscriptions/status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'customerId': customerId}),
+      );
+    }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) return data;
     throw ApiException(data['message']?.toString() ?? 'Failed to load subscription status');
@@ -168,14 +196,117 @@ class ApiService {
       bodyMap['coupon'] = promoCode.trim();
     }
 
-    final response = await _Http.post(
-      Uri.parse('$_baseUrl/api/subscriptions'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(bodyMap),
-    );
+    http.Response response;
+    try {
+      response = await _Http.post(
+        Uri.parse('$_baseUrl/api/subscriptions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+        checkInternet: false,
+      );
+      if (response.statusCode == 404) {
+        response = await _Http.post(
+          Uri.parse('$_devBaseUrl/api/subscriptions'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(bodyMap),
+        );
+      }
+    } catch (_) {
+      response = await _Http.post(
+        Uri.parse('$_devBaseUrl/api/subscriptions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+      );
+    }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) return data;
     throw ApiException(data['message']?.toString() ?? 'Subscription failed');
+  }
+
+  Future<Map<String, dynamic>> createStripePaymentIntent({
+    required int customerId,
+    required String plan,
+    int? subscriptionPackageId,
+    String? promoCode,
+  }) async {
+    final bodyMap = <String, dynamic>{
+      'customerId': customerId,
+      'plan': plan,
+      if (subscriptionPackageId != null) 'subscriptionPackageId': subscriptionPackageId,
+      if (promoCode != null && promoCode.trim().isNotEmpty) 'promoCode': promoCode.trim(),
+    };
+
+    http.Response response;
+    try {
+      response = await _Http.post(
+        Uri.parse('$_baseUrl/api/stripe/payment-intent'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+        checkInternet: false,
+      );
+      if (response.statusCode == 404) {
+        response = await _Http.post(
+          Uri.parse('$_devBaseUrl/api/stripe/payment-intent'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(bodyMap),
+        );
+      }
+    } catch (_) {
+      response = await _Http.post(
+        Uri.parse('$_devBaseUrl/api/stripe/payment-intent'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 200 && response.statusCode < 300) return data;
+    throw ApiException(data['error']?.toString() ?? data['message']?.toString() ?? 'Failed to initialize payment');
+  }
+
+  Future<Map<String, dynamic>> createStripeCheckoutSession({
+    required int customerId,
+    required String plan,
+    int? subscriptionPackageId,
+    String? promoCode,
+    String? customerEmail,
+    String? successUrl,
+    String? cancelUrl,
+  }) async {
+    final bodyMap = <String, dynamic>{
+      'customerId': customerId,
+      'plan': plan,
+      if (customerEmail != null && customerEmail.isNotEmpty) 'customerEmail': customerEmail,
+      if (subscriptionPackageId != null) 'subscriptionPackageId': subscriptionPackageId,
+      if (promoCode != null && promoCode.trim().isNotEmpty) 'promoCode': promoCode.trim(),
+      if (successUrl != null) 'successUrl': successUrl,
+      if (cancelUrl != null) 'cancelUrl': cancelUrl,
+    };
+
+    http.Response response;
+    try {
+      response = await _Http.post(
+        Uri.parse('$_baseUrl/api/stripe/checkout-session'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+        checkInternet: false,
+      );
+      if (response.statusCode == 404) {
+        response = await _Http.post(
+          Uri.parse('$_devBaseUrl/api/stripe/checkout-session'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(bodyMap),
+        );
+      }
+    } catch (_) {
+      response = await _Http.post(
+        Uri.parse('$_devBaseUrl/api/stripe/checkout-session'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 200 && response.statusCode < 300) return data;
+    throw ApiException(data['error']?.toString() ?? data['message']?.toString() ?? 'Failed to initialize checkout session');
   }
 
   Future<Map<String, dynamic>> updateProfile({
@@ -351,11 +482,17 @@ class _Http {
     }
   }
 
-  static Future<http.Response> post(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+  static Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool checkInternet = true,
+  }) async {
     try {
       return await http.post(url, headers: headers, body: body, encoding: encoding);
     } catch (e) {
-      _checkInternet(e);
+      if (checkInternet) _checkInternet(e);
       rethrow;
     }
   }
@@ -371,13 +508,14 @@ class _Http {
 
   static void _checkInternet(Object e) {
     final errStr = e.toString();
-    if (errStr.contains('SocketException') ||
-        errStr.contains('Failed host lookup') ||
-        errStr.contains('ClientException') ||
-        errStr.contains('Connection closed') ||
-        errStr.contains('Connection failed') ||
-        errStr.contains('Network is unreachable') ||
-        errStr.contains('HandshakeException')) {
+    // Do not show "No Internet" if connection was refused or trying dev/local endpoints
+    if (errStr.contains('10.0.2.2') ||
+        errStr.contains('localhost') ||
+        errStr.contains('Connection refused')) {
+      return;
+    }
+    if (errStr.contains('Failed host lookup') ||
+        errStr.contains('Network is unreachable')) {
       showNoInternetDialog();
     }
   }

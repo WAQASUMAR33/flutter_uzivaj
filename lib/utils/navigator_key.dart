@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -13,13 +11,18 @@ void showNoInternetDialog() {
   _isDialogShowing = true;
   showDialog(
     context: context,
-    barrierDismissible: false,
+    barrierDismissible: true,
     builder: (ctx) => AlertDialog(
       title: const Row(
         children: [
           Icon(Icons.wifi_off, color: Colors.red),
           SizedBox(width: 10),
-          Text('No Internet Connection'),
+          Expanded(
+            child: Text(
+              'No Internet Connection',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
         ],
       ),
       content: const Text(
@@ -29,10 +32,7 @@ void showNoInternetDialog() {
         TextButton(
           onPressed: () {
             _isDialogShowing = false;
-            // Closes the application
-            SystemNavigator.pop();
-            // Fallback
-            exit(0);
+            Navigator.of(ctx, rootNavigator: true).pop();
           },
           child: const Text(
             'OK',
@@ -41,5 +41,5 @@ void showNoInternetDialog() {
         ),
       ],
     ),
-  );
+  ).then((_) => _isDialogShowing = false);
 }

@@ -9,6 +9,10 @@ import '/screens/payment_success_screen.dart';
 import 'package:provider/provider.dart';
 import '/providers/locale_provider.dart';
 import '/l10n/app_strings.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
+import '/config/stripe_config.dart';
 
 class OrderSummaryScreen extends StatefulWidget {
   final SubscriptionPackage package;
@@ -126,6 +130,18 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
       final customerId =
           ((_user?['id'] ?? _user?['customerId'] ?? 0) as num).toInt();
 
+      if (customerId == 0) {
+        if (!mounted) return;
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in before subscribing.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // Block buying a package the account already holds (before charging).
       try {
         final status =
@@ -150,50 +166,41 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
         // Status check failed — the server remains the final gate.
       }
 
-      // Simulate Stripe payment processing delay
-      await Future.delayed(const Duration(milliseconds: 1800));
+      final promoStr = _promoData?['code']?.toString() ?? _promoController.text.trim();
 
-      final paymentRef = 'PAY_${DateTime.now().millisecondsSinceEpoch}';
-      final platform = _detectPlatform();
-
-      final subscription = await ApiService().createSubscription(
-        customerId: customerId,
-        subscriptionPackageId: pkg.id,
-        plan: 'ANNUAL',
-        paymentRef: paymentRef,
-        platform: platform,
-        promoCode: _promoData?['code']?.toString() ?? _promoController.text.trim(),
-      );
-
-      // Persist the new subscription into the stored user so local
-      // ACTIVE checks (e.g. redeem flow) pass without a re-login.
-      final storage = UserStorageService();
-      final storedUser = await storage.getUser();
-      if (storedUser != null) {
-        final subData = subscription['subscription'] is Map<String, dynamic>
-            ? subscription['subscription'] as Map<String, dynamic>
-            : subscription;
-        storedUser['subscription'] = {
-          ...subData,
-          'status': subData['status']?.toString() ?? 'ACTIVE',
-        };
-        await storage.saveUser(storedUser);
+      if (kIsWeb) {
+        await _processWebPayment(
+          pkg: pkg,
+          customerId: customerId,
+          total: total,
+          isEn: isEn,
+          promoStr: promoStr,
+        );
+      } else {
+        await _processMobilePayment(
+          pkg: pkg,
+          customerId: customerId,
+          total: total,
+          isEn: isEn,
+          promoStr: promoStr,
+        );
       }
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PaymentSuccessScreen(
-            subscription: subscription,
-            packageTitle: pkg.title(isEn),
-            totalPaid: total,
-          ),
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
+      if (e is StripeException) {
+        if (e.error.code == FailureCode.Canceled) {
+          // User closed or canceled the payment sheet
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.error.localizedMessage ?? 'Payment cancelled or failed'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -201,6 +208,151 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _processWebPayment({
+    required SubscriptionPackage pkg,
+    required int customerId,
+    required double total,
+    required bool isEn,
+    required String promoStr,
+  }) async {
+    // 1. Create Stripe Checkout Session on backend
+    final sessionData = await ApiService().createStripeCheckoutSession(
+      customerId: customerId,
+      plan: 'ANNUAL',
+      subscriptionPackageId: pkg.id,
+      promoCode: promoStr.isNotEmpty ? promoStr : null,
+      customerEmail: _user?['email']?.toString(),
+    );
+
+    final checkoutUrl = sessionData['url'] as String?;
+    final sessionId = sessionData['sessionId'] as String?;
+
+    if (checkoutUrl == null || checkoutUrl.isEmpty) {
+      throw const ApiException('Failed to create Stripe checkout session.');
+    }
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+
+    // 2. Open Stripe Checkout in browser tab
+    final uri = Uri.parse(checkoutUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault, webOnlyWindowName: '_blank');
+    }
+
+    if (!mounted) return;
+
+    // 3. Show Verification Dialog in Flutter app while user completes Stripe checkout
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => _StripeWebCheckoutDialog(
+        checkoutUrl: checkoutUrl,
+        sessionId: sessionId ?? '',
+        customerId: customerId,
+        package: pkg,
+        total: total,
+        isEn: isEn,
+        promoCode: promoStr.isNotEmpty ? promoStr : null,
+        onSuccess: (sub) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentSuccessScreen(
+                subscription: sub,
+                packageTitle: pkg.title(isEn),
+                totalPaid: total,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _processMobilePayment({
+    required SubscriptionPackage pkg,
+    required int customerId,
+    required double total,
+    required bool isEn,
+    required String promoStr,
+  }) async {
+    // 1. Create Payment Intent & Mobile Credentials from backend
+    final intentData = await ApiService().createStripePaymentIntent(
+      customerId: customerId,
+      plan: 'ANNUAL',
+      subscriptionPackageId: pkg.id,
+      promoCode: promoStr.isNotEmpty ? promoStr : null,
+    );
+
+    final clientSecret = intentData['clientSecret'] as String?;
+    final customerEphemeralKeySecret = intentData['ephemeralKey'] as String?;
+    final stripeCustomerId = intentData['customer'] as String?;
+    final subscriptionId = intentData['subscriptionId'] as String?;
+
+    if (clientSecret == null || clientSecret.isEmpty) {
+      throw const ApiException('Failed to receive Stripe client secret from server');
+    }
+
+    // 2. Initialize Payment Sheet
+    await Stripe.instance.initPaymentSheet(
+      paymentSheetParameters: SetupPaymentSheetParameters(
+        paymentIntentClientSecret: clientSecret,
+        customerEphemeralKeySecret: customerEphemeralKeySecret,
+        customerId: stripeCustomerId,
+        merchantDisplayName: StripeConfig.merchantDisplayName,
+        style: ThemeMode.light,
+        appearance: const PaymentSheetAppearance(
+          colors: PaymentSheetAppearanceColors(
+            primary: Apptheme.bluecolor,
+          ),
+        ),
+      ),
+    );
+
+    // 3. Present Stripe Payment Sheet
+    await Stripe.instance.presentPaymentSheet();
+
+    final paymentRef = subscriptionId ?? 'STRIPE_${DateTime.now().millisecondsSinceEpoch}';
+    final platform = _detectPlatform();
+
+    final subscription = await ApiService().createSubscription(
+      customerId: customerId,
+      subscriptionPackageId: pkg.id,
+      plan: 'ANNUAL',
+      paymentRef: paymentRef,
+      platform: platform,
+      promoCode: promoStr.isNotEmpty ? promoStr : null,
+    );
+
+    // Persist the new subscription into the stored user
+    final storage = UserStorageService();
+    final storedUser = await storage.getUser();
+    if (storedUser != null) {
+      final subData = subscription['subscription'] is Map<String, dynamic>
+          ? subscription['subscription'] as Map<String, dynamic>
+          : subscription;
+      storedUser['subscription'] = {
+        ...subData,
+        'status': subData['status']?.toString() ?? 'ACTIVE',
+      };
+      await storage.saveUser(storedUser);
+    }
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentSuccessScreen(
+          subscription: subscription,
+          packageTitle: pkg.title(isEn),
+          totalPaid: total,
+        ),
+      ),
+    );
   }
 
   String _detectPlatform() {
@@ -919,6 +1071,255 @@ class _PaymentBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: Colors.black54,
+        ),
+      ),
+    );
+  }
+}
+
+class _StripeWebCheckoutDialog extends StatefulWidget {
+  final String checkoutUrl;
+  final String sessionId;
+  final int customerId;
+  final SubscriptionPackage package;
+  final double total;
+  final bool isEn;
+  final String? promoCode;
+  final void Function(Map<String, dynamic> subscription) onSuccess;
+
+  const _StripeWebCheckoutDialog({
+    required this.checkoutUrl,
+    required this.sessionId,
+    required this.customerId,
+    required this.package,
+    required this.total,
+    required this.isEn,
+    required this.promoCode,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_StripeWebCheckoutDialog> createState() => _StripeWebCheckoutDialogState();
+}
+
+class _StripeWebCheckoutDialogState extends State<_StripeWebCheckoutDialog> {
+  bool _isChecking = false;
+  String? _error;
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-poll subscription status every 3.5 seconds
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) {
+      _checkPaymentStatus(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkPaymentStatus({bool silent = false}) async {
+    if (_isChecking) return;
+    if (!silent) {
+      setState(() {
+        _isChecking = true;
+        _error = null;
+      });
+    }
+
+    try {
+      // 1. Check if backend already has active subscription for this customer
+      final status = await ApiService().getSubscriptionStatus(customerId: widget.customerId);
+      if (status['subscribed'] == true) {
+        _pollingTimer?.cancel();
+        if (mounted) Navigator.of(context).pop();
+        widget.onSuccess(status);
+        return;
+      }
+
+      // 2. If user explicitly clicked verify, attempt activation via createSubscription with sessionId
+      if (!silent) {
+        final sub = await ApiService().createSubscription(
+          customerId: widget.customerId,
+          subscriptionPackageId: widget.package.id,
+          plan: 'ANNUAL',
+          paymentRef: widget.sessionId,
+          platform: 'web',
+          promoCode: widget.promoCode,
+        );
+
+        final storage = UserStorageService();
+        final storedUser = await storage.getUser();
+        if (storedUser != null) {
+          final subData = sub['subscription'] is Map<String, dynamic>
+              ? sub['subscription'] as Map<String, dynamic>
+              : sub;
+          storedUser['subscription'] = {
+            ...subData,
+            'status': subData['status']?.toString() ?? 'ACTIVE',
+          };
+          await storage.saveUser(storedUser);
+        }
+
+        _pollingTimer?.cancel();
+        if (mounted) Navigator.of(context).pop();
+        widget.onSuccess(sub);
+      }
+    } catch (e) {
+      if (!silent && mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+          _isChecking = false;
+        });
+      }
+    } finally {
+      if (!silent && mounted) {
+        setState(() => _isChecking = false);
+      }
+    }
+  }
+
+  Future<void> _reopenCheckout() async {
+    final uri = Uri.parse(widget.checkoutUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault, webOnlyWindowName: '_blank');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      elevation: 12,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Stripe Badge Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF635BFF).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lock_outline, color: Color(0xFF635BFF), size: 30),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Complete Payment on Stripe',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'A secure Stripe Checkout window has been opened to complete your subscription for ${widget.package.title(widget.isEn)}.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total to Pay:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '€${widget.total.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Apptheme.bluecolor),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Status Indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF635BFF)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Listening for Stripe payment...',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 12, color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 24),
+              // Action Buttons
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isChecking ? null : () => _checkPaymentStatus(silent: false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Apptheme.bluecolor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isChecking
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          'I Have Completed Payment',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: _reopenCheckout,
+                    icon: const Icon(Icons.open_in_new, size: 16, color: Color(0xFF635BFF)),
+                    label: const Text('Re-open Stripe Window', style: TextStyle(color: Color(0xFF635BFF), fontSize: 13)),
+                  ),
+                  const Text(' · ', style: TextStyle(color: Colors.grey)),
+                  TextButton(
+                    onPressed: () {
+                      _pollingTimer?.cancel();
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
