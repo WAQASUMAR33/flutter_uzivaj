@@ -4,7 +4,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// them so it works whether the base has a trailing slash and/or the
 /// filename has a leading slash (the API has returned both forms).
 String joinImageUrl(String base, String name) {
-  if (name.startsWith('http')) return name;
+  if (name.startsWith('http://') || name.startsWith('https://')) return name;
+  if (name.startsWith('/uploads/') || name.startsWith('uploads/') || name.endsWith('.webp')) {
+    const nextJsBase = 'https://uvizajapp.vercel.app';
+    final clean = name.startsWith('/') ? name : '/$name';
+    return '$nextJsBase$clean';
+  }
   final b = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
   final n = name.startsWith('/') ? name : '/$name';
   return '$b$n';
