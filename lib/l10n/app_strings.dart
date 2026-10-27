@@ -296,6 +296,9 @@ class AppStrings {
       _isHR ? 'Ocijenite svoje iskustvo' : 'Rate your experience';
   String get skipBtn => _isHR ? 'Preskoči' : 'Skip';
   String get submitBtn => _isHR ? 'Pošalji' : 'Submit';
+  String get continueBtn => _isHR ? 'Nastavi' : 'Continue';
+  String get thankYouForFeedback =>
+      _isHR ? 'Hvala vam na osvrtu!' : 'Thank you for your feedback!';
 
   // ── Modals / Dialogs ────────────────────────────────────────────────────────────
   String get chooseYourPlan => _isHR ? 'Odaberi plan' : 'Choose your plan';

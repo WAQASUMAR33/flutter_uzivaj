@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '/theme/app_theme.dart';
 import '/providers/app_provider.dart';
 import '/providers/login_provider.dart';
@@ -117,8 +118,6 @@ class _Merchant {
   factory _Merchant.fromJson(Map<String, dynamic> j) {
     List<String> imgs = [];
     final raw = j['images'];
-    print('DEBUG: Merchant ID: ${j['id']}, Raw images value: $raw');
-    print('DEBUG: Raw images type: ${raw.runtimeType}');
 
     if (raw is String && raw.isNotEmpty) {
       try {
@@ -126,16 +125,14 @@ class _Merchant {
         imgs = parsed
             .map((img) => webSafeImageUrl(joinImageUrl(_baseImageUrl, img)))
             .toList();
-      } catch (e) {
-        print('DEBUG: Error parsing string images: $e');
-      }
+      } catch (_) {}
     } else if (raw is List) {
       try {
         final parsed = List<String>.from(raw);
         imgs = parsed
             .map((img) => webSafeImageUrl(joinImageUrl(_baseImageUrl, img)))
             .toList();
-      } catch (e) {}
+      } catch (_) {}
     }
 
     return _Merchant(
@@ -1067,10 +1064,11 @@ class _MerchantCard extends StatelessWidget {
                     height: 180,
                     width: double.infinity,
                     child: merchant.firstImage != null
-                        ? Image.network(
-                            merchant.firstImage!,
+                        ? CachedNetworkImage(
+                            imageUrl: merchant.firstImage!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                            placeholder: (_, __) => _imagePlaceholder(),
+                            errorWidget: (_, __, ___) => _imagePlaceholder(),
                           )
                         : _imagePlaceholder(),
                   ),
@@ -1514,10 +1512,11 @@ class _SearchCardState extends State<_SearchCard> {
                     height: 160,
                     width: double.infinity,
                     child: widget.merchant.firstImage != null
-                        ? Image.network(
-                            widget.merchant.firstImage!,
+                        ? CachedNetworkImage(
+                            imageUrl: widget.merchant.firstImage!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholder(),
+                            placeholder: (_, __) => _placeholder(),
+                            errorWidget: (_, __, ___) => _placeholder(),
                           )
                         : _placeholder(),
                   ),
@@ -2063,10 +2062,11 @@ class _NearbyCard extends StatelessWidget {
                 width: 100,
                 height: 100,
                 child: merchant.firstImage != null
-                    ? Image.network(
-                        merchant.firstImage!,
+                    ? CachedNetworkImage(
+                        imageUrl: merchant.firstImage!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
+                        placeholder: (_, __) => _placeholder(),
+                        errorWidget: (_, __, ___) => _placeholder(),
                       )
                     : _placeholder(),
               ),
@@ -2367,12 +2367,12 @@ class CategoriesScreen extends StatelessWidget {
                                 featured.image!.isNotEmpty)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  featured.image!,
+                                child: CachedNetworkImage(
+                                  imageUrl: featured.image!,
                                   width: 64,
                                   height: 64,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
+                                  errorWidget: (context, error, stackTrace) =>
                                       Text(
                                         featured.emoji,
                                         style: const TextStyle(fontSize: 48),
@@ -2469,12 +2469,12 @@ class CategoriesScreen extends StatelessWidget {
                 if (lastCat.image != null && lastCat.image!.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      lastCat.image!,
+                    child: CachedNetworkImage(
+                      imageUrl: lastCat.image!,
                       width: 48,
                       height: 48,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
+                      errorWidget: (context, error, stackTrace) => Container(
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
@@ -2573,12 +2573,12 @@ class CategoriesScreen extends StatelessWidget {
             if (cat.image != null && cat.image!.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  cat.image!,
+                child: CachedNetworkImage(
+                  imageUrl: cat.image!,
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  errorWidget: (context, error, stackTrace) => Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(

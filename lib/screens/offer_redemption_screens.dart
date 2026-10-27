@@ -774,77 +774,101 @@ class _OfferRedeemedScreenState extends State<OfferRedeemedScreen> {
                   ],
                 ),
               ] else ...[
-              const SizedBox(height: 20),
-              const Icon(Icons.check_circle, color: Colors.green, size: 60),
-              const SizedBox(height: 16),
-              Text(
-                'Thank you for your feedback!',
-                style: TextStyle(
-                  color: Apptheme.blackcolor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (_updatedAvgRating != null && _updatedRatingCount != null)
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F5E9),
+                    shape: BoxShape.circle,
                   ),
-                  decoration: BoxDecoration(
-                    color: Apptheme.offwhitecolor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        _updatedAvgRating!.toStringAsFixed(1),
-                        style: TextStyle(
-                          color: Apptheme.blackcolor,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '($_updatedRatingCount reviews)',
-                        style: TextStyle(
-                          color: Apptheme.blackcolor.withValues(alpha: 0.6),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
+                  child: const Center(
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF2E7D32),
+                      size: 44,
+                    ),
                   ),
                 ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => setState(() => _showRatingModal = false),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Apptheme.bluecolor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Continue',
+                const SizedBox(height: 20),
+                Text(
+                  AppStrings.of(context).thankYouForFeedback,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 16,
+                    color: Apptheme.blackcolor,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    fontFamily: 'Poppins',
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                if (_updatedAvgRating != null && _updatedRatingCount != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Apptheme.offwhitecolor,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _updatedAvgRating!.toStringAsFixed(1),
+                          style: TextStyle(
+                            color: Apptheme.blackcolor,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '($_updatedRatingCount reviews)',
+                          style: TextStyle(
+                            color: Apptheme.blackcolor.withValues(alpha: 0.6),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => setState(() => _showRatingModal = false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Apptheme.bluecolor,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      AppStrings.of(context).continueBtn,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
           ],
         ),
       ),
