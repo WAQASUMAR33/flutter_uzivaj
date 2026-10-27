@@ -112,8 +112,7 @@ class _Merchant {
   String address(bool isEn) => isEn ? addressEn : addressHr;
   String city(bool isEn) => isEn ? cityEn : cityHr;
 
-  static const String _baseImageUrl =
-      'https://uzivaj.rizwancars.com/data/uploads/';
+  static const String _baseImageUrl = appImageUploadsBaseUrl;
 
   factory _Merchant.fromJson(Map<String, dynamic> j) {
     List<String> imgs = [];

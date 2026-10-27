@@ -9,6 +9,7 @@ import '/services/apiService.dart';
 import '/services/userStorageService.dart';
 import 'package:provider/provider.dart';
 import '/providers/locale_provider.dart';
+import '/utils/image_url.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -71,7 +72,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Future<void> _fetchPackages() async {
     try {
       final res = await http.get(
-        Uri.parse('https://uvizajapp.vercel.app/api/subscription-packages'),
+        Uri.parse('$appBaseUrl/api/subscription-packages'),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List<dynamic>;

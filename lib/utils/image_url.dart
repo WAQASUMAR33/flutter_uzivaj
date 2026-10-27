@@ -1,18 +1,24 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Joins an image base URL with a filename, normalizing the slash between
-/// them so it works whether the base has a trailing slash and/or the
-/// filename has a leading slash (the API has returned both forms).
+const String appBaseUrl = 'https://uzivajlife.online';
+const String appImageUploadsBaseUrl = 'https://uzivajlife.online/uploads';
+
+/// Joins an image base URL with a filename or path.
+/// All uploaded images are served from https://uzivajlife.online/uploads/
 String joinImageUrl(String base, String name) {
-  if (name.startsWith('http://') || name.startsWith('https://')) return name;
-  if (name.startsWith('/uploads/') || name.startsWith('uploads/') || name.endsWith('.webp')) {
-    const nextJsBase = 'https://uvizajapp.vercel.app';
-    final clean = name.startsWith('/') ? name : '/$name';
-    return '$nextJsBase$clean';
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
   }
-  final b = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-  final n = name.startsWith('/') ? name : '/$name';
-  return '$b$n';
+  if (trimmed.startsWith('/uploads/')) {
+    return '$appBaseUrl$trimmed';
+  }
+  if (trimmed.startsWith('uploads/')) {
+    return '$appBaseUrl/$trimmed';
+  }
+  final clean = trimmed.replaceFirst(RegExp(r'^/+'), '');
+  return '$appImageUploadsBaseUrl/$clean';
 }
 
 /// On Flutter Web, `Image.network` decodes images via the CanvasKit renderer,

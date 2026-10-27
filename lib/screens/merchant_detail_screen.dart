@@ -259,8 +259,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
           .cast<Map<String, dynamic>>()
           .toList();
 
-  static const String _baseImageUrl =
-      'https://uzivaj.rizwancars.com/data/uploads';
+  static const String _baseImageUrl = appImageUploadsBaseUrl;
 
   String _resolveImage(String img) =>
       webSafeImageUrl(joinImageUrl(_baseImageUrl, img));

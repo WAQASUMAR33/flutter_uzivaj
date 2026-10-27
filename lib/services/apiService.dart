@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '/utils/navigator_key.dart';
 
-const String _baseUrl = 'https://uvizajapp.vercel.app';
+const String _baseUrl = 'https://uzivajlife.online';
 
 String get _devBaseUrl {
   if (kIsWeb) return 'http://localhost:3001';
