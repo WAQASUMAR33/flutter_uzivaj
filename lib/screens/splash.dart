@@ -14,17 +14,17 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  // --- Smiley: draws itself + soft fade ---
-  late AnimationController _smileyController;
-  late Animation<double> _smileyDraw; // 0 → 1 stroke progress
+  // Main entrance animation controller (smiley down + logo up into center)
+  late AnimationController _entranceController;
+  late Animation<Offset> _smileySlide;
   late Animation<double> _smileyFade;
+  late Animation<double> _smileyDraw;
 
-  // --- Logo: fade + gentle scale settle ---
-  late AnimationController _logoController;
+  late Animation<Offset> _logoSlide;
   late Animation<double> _logoFade;
   late Animation<double> _logoScale;
 
-  // --- Exit: whole screen fades out into next route ---
+  // Exit transition controller (screen fade out)
   late AnimationController _exitController;
   late Animation<double> _exitFade;
 
@@ -34,68 +34,82 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Smiley: 2000 ms — stroke traces on smoothly (easeInOut = natural draw)
-    _smileyController = AnimationController(
+    // 1. Entrance animation (1100ms)
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1100),
     );
+
+    // Smiley icon glides down from the TOP into center
+    _smileySlide = Tween<Offset>(
+      begin: const Offset(0.0, -2.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _smileyFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
     _smileyDraw = CurvedAnimation(
-      parent: _smileyController,
-      curve: Curves.easeInOutCubic,
-    );
-    // Fade the smiley in fast over the first third so the draw feels alive
-    _smileyFade = CurvedAnimation(
-      parent: _smileyController,
-      curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
+      parent: _entranceController,
+      curve: const Interval(0.15, 0.95, curve: Curves.easeInOutCubic),
     );
 
-    // Logo: 650 ms — fade in + settle from a hair larger (0.94 → 1.0)
-    _logoController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 650),
-    );
-    _logoFade = CurvedAnimation(
-      parent: _logoController,
-      curve: Curves.easeOut,
-    );
-    _logoScale = Tween<double>(begin: 0.94, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOutCubic),
+    // Uživaj logo glides up from the BOTTOM into center
+    _logoSlide = Tween<Offset>(
+      begin: const Offset(0.0, 2.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
     );
 
-    // Exit: 500 ms — cross-fade the whole splash out before navigating
+    _logoScale = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    // 2. Exit transition (450ms)
     _exitController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 450),
     );
     _exitFade = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _exitController, curve: Curves.easeInOut),
     );
 
-    // Chain: smiley finishes → short beat → logo eases in
-    _smileyController.addStatusListener((status) {
+    // Sequence: Entrance finishes -> hold briefly -> trigger exit fade out
+    _entranceController.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        Future.delayed(const Duration(milliseconds: 160), () {
-          if (mounted) _logoController.forward();
-        });
-      }
-    });
-
-    // When logo settles → hold briefly → fade the whole screen out
-    _logoController.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Future.delayed(const Duration(milliseconds: 650), () {
+        Future.delayed(const Duration(milliseconds: 750), () {
           if (mounted) _exitController.forward();
         });
       }
     });
 
-    // Navigate exactly as the fade-out lands → seamless hand-off
     _exitController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) _go();
+      if (status == AnimationStatus.completed) {
+        _go();
+      }
     });
 
-    // Start the sequence
-    _smileyController.forward();
+    // Start entrance animation
+    _entranceController.forward();
   }
 
   Future<void> _go() async {
@@ -115,7 +129,6 @@ class _SplashScreenState extends State<SplashScreen>
       next = onboardingDone ? const LoginScreen() : const OnboardingScreen();
     }
 
-    // Smooth fade route so the next screen eases in (no hard cut)
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
@@ -129,8 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _smileyController.dispose();
-    _logoController.dispose();
+    _entranceController.dispose();
     _exitController.dispose();
     super.dispose();
   }
@@ -143,31 +155,38 @@ class _SplashScreenState extends State<SplashScreen>
         opacity: _exitFade,
         child: Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Step 1 — smiley draws itself stroke-by-stroke
-              FadeTransition(
-                opacity: _smileyFade,
-                child: AnimatedBuilder(
-                  animation: _smileyDraw,
-                  builder: (_, __) => CustomPaint(
-                    size: const Size(200, 120),
-                    painter: SmileyPainter(
-                      color: Apptheme.ambercolor,
-                      progress: _smileyDraw.value,
+              // Smiley icon: slides from top to center
+              SlideTransition(
+                position: _smileySlide,
+                child: FadeTransition(
+                  opacity: _smileyFade,
+                  child: AnimatedBuilder(
+                    animation: _smileyDraw,
+                    builder: (_, __) => CustomPaint(
+                      size: const Size(200, 120),
+                      painter: SmileyPainter(
+                        color: Apptheme.ambercolor,
+                        progress: _smileyDraw.value,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 36),
-              // Step 2 — logo fades in + settles after smiley is drawn
-              FadeTransition(
-                opacity: _logoFade,
-                child: ScaleTransition(
-                  scale: _logoScale,
-                  child: Image.asset(
-                    'assets/SVG/uzivaj_logo.png',
-                    height: 120,
+              const SizedBox(height: 28),
+              // Uživaj logo: slides from bottom to center
+              SlideTransition(
+                position: _logoSlide,
+                child: FadeTransition(
+                  opacity: _logoFade,
+                  child: ScaleTransition(
+                    scale: _logoScale,
+                    child: Image.asset(
+                      'assets/SVG/uzivaj_logo.png',
+                      height: 120,
+                    ),
                   ),
                 ),
               ),
