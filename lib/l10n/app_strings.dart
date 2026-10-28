@@ -36,7 +36,7 @@ class AppStrings {
   String get onboarding1Title =>
       _isHR ? 'Uživaj više.\nPlati manje.' : 'Enjoy more.\nPay less.';
   String get onboarding1Desc => _isHR
-      ? 'Uživaj je ugostiteljsko članstvo koje vam daje pristup ekskluzivnim ponudama "Kupi 1 Dobij 1 besplatno" u najboljim restoranima, kafićima i barovima Zagreba.'
+      ? 'Uživaj je lifestyle članstvo koje ti omogućuje da otkriješ nova mjesta u Zagrebu i uživaš u posebnim ponudama i pogodnostima u odabranim restoranima, kafićima, barovima i drugim mjestima.'
       : "Užívaj is a dining membership that gives you access to exclusive Buy 1 Get 1 Free offers at Zagreb's best restaurants, cafés and bars.";
   String get onboarding2Title =>
       _isHR ? 'Korištenje je\njednostavno.' : 'Redeeming is\nsimple.';
