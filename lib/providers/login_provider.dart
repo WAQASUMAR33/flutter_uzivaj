@@ -41,7 +41,12 @@ class LoginProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      final err = e.toString().replaceAll('Exception: ', '');
+      if (err.contains('Failed to fetch') || err.contains('ClientException')) {
+        _error = 'Unable to connect to server. Please check network connection or SSL certificate.';
+      } else {
+        _error = err;
+      }
       _isLoading = false;
       notifyListeners();
       return false;
