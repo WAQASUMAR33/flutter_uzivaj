@@ -301,62 +301,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                     // Social buttons — side by side
                                     Consumer<AuthProvider>(
                                       builder: (context, authProvider, _) {
-                                        return Row(
-                                          children: [
-                                            Expanded(
-                                              child: _SocialButton(
-                                                label: 'Google',
-                                                icon: FontAwesomeIcons.google,
-                                                iconColor: const Color(0xFFEA4335),
-                                                loading: _socialLoading == 'google',
-                                                disabled: authProvider.isLoading,
-                                                onTap: () async {
-                                                  setState(() => _socialLoading = 'google');
-                                                  final success = await authProvider.signInWithGoogle();
-                                                  if (!context.mounted) return;
-                                                  setState(() => _socialLoading = null);
-                                                  if (success) {
-                                                    Navigator.pushReplacement(context,
-                                                        MaterialPageRoute(builder: (_) => const HomeScreen()));
-                                                  } else if (authProvider.error != null) {
-                                                    if (authProvider.error!.contains('suspended')) {
-                                                      _showSuspendedDialog(context);
-                                                    } else {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text(authProvider.error!)));
-                                                    }
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: _SocialButton(
-                                                label: 'Apple',
-                                                icon: FontAwesomeIcons.apple,
-                                                iconColor: Colors.black87,
-                                                loading: _socialLoading == 'apple',
-                                                disabled: authProvider.isLoading,
-                                                onTap: () async {
-                                                  setState(() => _socialLoading = 'apple');
-                                                  final success = await authProvider.signInWithApple();
-                                                  if (!context.mounted) return;
-                                                  setState(() => _socialLoading = null);
-                                                  if (success) {
-                                                    Navigator.pushReplacement(context,
-                                                        MaterialPageRoute(builder: (_) => const HomeScreen()));
-                                                  } else if (authProvider.error != null) {
-                                                    if (authProvider.error!.contains('suspended')) {
-                                                      _showSuspendedDialog(context);
-                                                    } else {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text(authProvider.error!)));
-                                                    }
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                          ],
+                                        return SizedBox(
+                                          width: double.infinity,
+                                          child: _SocialButton(
+                                            label: 'Google',
+                                            icon: FontAwesomeIcons.google,
+                                            iconColor: const Color(0xFFEA4335),
+                                            loading: _socialLoading == 'google',
+                                            disabled: authProvider.isLoading,
+                                            onTap: () async {
+                                              setState(() => _socialLoading = 'google');
+                                              final success = await authProvider.signInWithGoogle();
+                                              if (!context.mounted) return;
+                                              setState(() => _socialLoading = null);
+                                              if (success) {
+                                                Navigator.pushReplacement(context,
+                                                    MaterialPageRoute(builder: (_) => const HomeScreen()));
+                                              } else if (authProvider.error != null) {
+                                                if (authProvider.error!.contains('suspended')) {
+                                                  _showSuspendedDialog(context);
+                                                } else {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text(authProvider.error!)));
+                                                }
+                                              }
+                                            },
+                                          ),
                                         );
                                       },
                                     ),
