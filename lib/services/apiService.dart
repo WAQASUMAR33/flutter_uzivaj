@@ -58,7 +58,11 @@ class ApiService {
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) return data;
-    throw ApiException(data['message']?.toString() ?? 'Registration failed');
+    throw ApiException(
+      data['error']?.toString() ??
+          data['message']?.toString() ??
+          'Registration failed',
+    );
   }
 
   Future<Map<String, dynamic>> getTermsAndConditions() async {

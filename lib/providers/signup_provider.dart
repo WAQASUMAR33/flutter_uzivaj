@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException;
 import '/services/authService.dart';
 import '/services/apiService.dart';
 import '/services/userStorageService.dart';
@@ -42,8 +43,23 @@ class SignupProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final credential = await _authService.signUpWithEmail(email, password);
-      final uid = credential.user!.uid;
+      String? uid;
+      try {
+        final credential = await _authService.signUpWithEmail(email, password);
+        uid = credential.user?.uid;
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'email-already-in-use') {
+          // If already in Firebase Auth from a previous interrupted registration attempt, fetch existing UID
+          try {
+            final credential = await _authService.signInWithEmail(email, password);
+            uid = credential.user?.uid;
+          } catch (_) {}
+        } else {
+          debugPrint('Firebase signUpWithEmail notice: $e');
+        }
+      } catch (e) {
+        debugPrint('Firebase signUpWithEmail non-fatal: $e');
+      }
 
       await _apiService.register(
         fullname: fullname,
@@ -53,7 +69,7 @@ class SignupProvider extends ChangeNotifier {
         nationality: nationality,
         dateOfBirth: dateOfBirth,
         gender: _selectedGender.toLowerCase(),
-        uid: uid,
+        uid: uid ?? '',
       );
 
       // Do not save user session as logged in yet; email verification is required
@@ -66,7 +82,12 @@ class SignupProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      final err = e.toString().replaceAll('Exception: ', '');
+      if (err.contains('Failed to fetch') || err.contains('ClientException') || err.contains('HandshakeException')) {
+        _error = 'Unable to connect to server. Please check your network connection.';
+      } else {
+        _error = err;
+      }
       _isLoading = false;
       notifyListeners();
       return false;
