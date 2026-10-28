@@ -32,7 +32,7 @@ class AppStrings {
   String get skip => _isHR ? 'Preskoči' : 'Skip';
   String get next => _isHR ? 'Dalje →' : 'Next →';
   String get startExploring =>
-      _isHR ? 'Počni istraživati →' : 'Start exploring →';
+      _isHR ? 'Kreni istraživati.' : 'Start exploring.';
   String get onboarding1Title =>
       _isHR ? 'Uživaj više.\nPlati manje.' : 'Enjoy more.\nPay less.';
   String get onboarding1Desc => _isHR
@@ -41,33 +41,33 @@ class AppStrings {
   String get onboarding2Title =>
       _isHR ? 'Korištenje je\njednostavno.' : 'Redeeming is\nsimple.';
   String get onboarding2Desc => _isHR
-      ? 'Odaberi ponudu i predaj telefon konobaru. Unose PIN restorana i ponuda se odmah potvrđuje. Bez QR kodova, bez tiskanja.'
-      : "Pick an offer, hand your phone to the waiter. They enter the restaurant's PIN and the offer is instantly confirmed. No QR codes, no printing.";
+      ? 'Odaberi ponudu koju želiš iskoristiti i pokaži je konobaru. Konobar unosi 4-znamenkasti PIN restorana i ponuda se odmah potvrđuje, bez QR kodova i bez papira.'
+      : "Choose the offer you want to use and show it to the waiter. The waiter enters the restaurant's 4-digit PIN and the offer is instantly confirmed, with no QR codes and no paper.";
   String get onboarding3Title =>
       _isHR ? 'Tvoj grad,\ntvoj stol.' : 'Your city,\nyour table.';
   String get onboarding3Desc => _isHR
-      ? 'Jedna večera vani pokriva cijelu godišnju pretplatu. Sve ostalo su čiste uštedine. Krenimo.'
-      : "One dinner out covers your entire year's membership. Everything else is pure saving. Let's get started.";
+      ? 'Jedna večera vani može pokriti cijelu godišnju članarinu. Sve nakon toga je ušteda.'
+      : "One dinner out can cover your entire annual membership. Everything after that is savings.";
   String get tapAnOffer => _isHR ? 'Odaberi ponudu' : 'Tap an offer';
   String get chooseBogo =>
-      _isHR ? 'Odaberi BOGO ili popust' : 'Choose BOGO or discount';
-  String get handToWaiter => _isHR ? 'Predaj konobaru' : 'Hand to waiter';
+      _isHR ? 'Odaberi ponudu koja ti odgovara' : 'Choose the offer that suits you';
+  String get handToWaiter => _isHR ? 'Pokaži ponudu konobaru' : 'Show offer to waiter';
   String get enterPin =>
-      _isHR ? 'Unose 4-znamenkasti PIN' : 'They enter their 4-digit PIN';
+      _isHR ? 'Konobar unosi 4-znamenkasti PIN restorana' : 'Waiter enters 4-digit PIN';
   String get offerUnlocked => _isHR ? 'Ponuda otključana!' : 'Offer unlocked!';
-  String get enjoyMeal => _isHR ? 'Uživajte u obroku' : 'Enjoy your meal';
+  String get enjoyMeal => _isHR ? 'Uživaj u svojoj pogodnosti' : 'Enjoy your benefit';
   String get offersPerRestaurant =>
-      _isHR ? '3 ponude po restoranu' : '3 offers per restaurant';
+      _isHR ? '3 ponude po mjestu' : '3 offers per venue';
   String get eachRedeemableOnce =>
-      _isHR ? 'Svaka jedanput iskoristiva' : 'Each redeemable once';
+      _isHR ? 'Svaka ponuda može se iskoristiti jednom' : 'Each offer can be redeemed once';
   String get zagrebVenues =>
-      _isHR ? '50+ objekata u Zagrebu' : '50+ Zagreb venues';
+      _isHR ? '50+ mjesta u Zagrebu' : '50+ places in Zagreb';
   String get newPlacesMonthly =>
-      _isHR ? 'Novi prostori svaki mjesec' : 'New places added monthly';
+      _isHR ? 'Nova mjesta svaki mjesec' : 'New places every month';
   String get oneDinnerPaysBack =>
-      _isHR ? 'Jedna večera pokrije troškove' : 'One dinner pays it back';
+      _isHR ? 'Jedna večera pokriva članstvo' : 'One dinner covers membership';
   String get pricePerYear =>
-      _isHR ? '€39/god. = €3,25/mj.' : '€39/year = €3.25/month';
+      _isHR ? '€39 godišnje = €3,25 mjesečno' : '€39 annually = €3.25 monthly';
 
   // ── Login ───────────────────────────────────────────────────────────────────
   String get welcomeBack => _isHR ? 'Dobrodošli natrag' : 'Welcome back';
@@ -185,7 +185,7 @@ class AppStrings {
 
   // ── Home ────────────────────────────────────────────────────────────────────
   String get discoverZagreb =>
-      _isHR ? 'Otkrij drugačije.' : 'Discover differently.';
+      _isHR ? 'Otkrij nešto novo.' : 'Discover something new.';
   String get searchHint =>
       _isHR ? 'Pretraži restorane, kafiće...' : 'Search restaurants, cafés...';
   String get categoriesLabel => _isHR ? 'KATEGORIJE' : 'CATEGORIES';
@@ -301,10 +301,10 @@ class AppStrings {
       _isHR ? 'Hvala vam na osvrtu!' : 'Thank you for your feedback!';
 
   // ── Modals / Dialogs ────────────────────────────────────────────────────────────
-  String get chooseYourPlan => _isHR ? 'Odaberi plan' : 'Choose your plan';
+  String get chooseYourPlan => _isHR ? 'Odaberi članstvo' : 'Choose your plan';
   String get annualOnly => _isHR
-      ? 'Samo godišnje · Bez mjesečne opcije'
-      : 'Annual only · No monthly option';
+      ? 'Pristup svim mjestima na Uživaj. Odaberi način plaćanja koji ti odgovara.'
+      : 'Full access to every partner venue. Pay how you like.';
   String get foundingMemberBanner => _isHR
       ? 'OSNIVAČKI ČLAN — SAMO 500 MJESTA'
       : 'FOUNDING MEMBER — 500 SPOTS ONLY';
@@ -337,8 +337,8 @@ class AppStrings {
   String get comingSoon => _isHR ? 'uskoro' : 'coming soon';
   String get selectStandard => _isHR ? 'Odaberi standardno' : 'Select standard';
   String get annualNoAutoRenewal => _isHR
-      ? 'Samo godišnje · Bez automatskog obnavljanja bez vašeg pristanka'
-      : 'Annual only · No auto-renewal without your consent';
+      ? 'Automatska obnova. Otkaži bilo kada.'
+      : 'Auto-renewal. Cancel anytime.';
 
   // ── Merchant Detail ─────────────────────────────────────────────────────────
   String get availableOffers => _isHR ? 'Dostupne ponude' : 'Available offers';

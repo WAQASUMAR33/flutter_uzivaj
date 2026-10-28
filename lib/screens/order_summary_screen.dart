@@ -53,7 +53,12 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
 
   // ── Promo code helpers ───────────────────────────────────────────────────
 
-  double get _basePrice => widget.package.priceYearly;
+  bool get _isMonthly =>
+      widget.package.titleEn.toLowerCase().contains('monthly') ||
+      widget.package.titleHr.toLowerCase().contains('mjesečno');
+
+  double get _basePrice =>
+      _isMonthly ? widget.package.priceMonthly : widget.package.priceYearly;
 
   double get _effectiveBase =>
       _promoData != null

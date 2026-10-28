@@ -146,18 +146,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        isSubscribed ? l.mySubscriptions : l.chooseYourPlan,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 2),
-                    if (!isSubscribed)
-                      Text(l.annualOnly,
-                          style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          isSubscribed ? l.mySubscriptions : l.chooseYourPlan,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      if (!isSubscribed)
+                        Text(l.annualOnly,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -547,26 +549,56 @@ class _PlanCard extends StatelessWidget {
     this.alreadyOwned = false,
   });
 
-  String _formatPrice(double value) {
-    if (value == value.truncateToDouble()) return value.toInt().toString();
-    return value.toStringAsFixed(2);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final price = package.priceYearly;
+    final isMonthly = package.titleEn.toLowerCase().contains('monthly') ||
+        package.titleHr.toLowerCase().contains('mjesečno');
+
+    // Ribbon tag
+    final ribbonTag = isMonthly
+        ? (isEn ? 'REGULAR MONTHLY' : 'MJESEČNO ČLANSTVO')
+        : (isEn ? 'FOUNDER ANNUAL' : 'GODIŠNJE ČLANSTVO ZA PRVE ČLANOVE');
+
+    // Title
+    final planTitle = isMonthly
+        ? (isEn ? 'Regular Monthly' : 'Mjesečno članstvo')
+        : (isEn ? 'Founder Annual' : 'Godišnje članstvo za prve članove');
+
+    // Big Price
+    final priceStr = isMonthly ? '5' : (isEn ? '3.25' : '3,25');
+    final perMonthUnit = isEn ? '/month' : '/mj.';
+
+    // Billing line
+    final billingLine = isMonthly
+        ? (isEn ? 'Billed monthly. Cancel anytime.' : 'Plaća se mjesečno. Otkaži bilo kada.')
+        : (isEn ? 'Billed annually: €39 upfront' : '39 € godišnje, plaćanje unaprijed');
+
+    // Features
+    final featuresList = isMonthly
+        ? <String>[]
+        : (isEn
+            ? ['Founder price locked in. First 1,000 members only']
+            : [
+                'Posebna cijena ostaje ti trajno.',
+                'Dostupno samo za prvih 1.000 članova.',
+              ]);
+
+    // Button text
+    final buttonText = isMonthly
+        ? (isEn ? 'Start Monthly' : 'Odaberi mjesečno članstvo')
+        : (isEn ? 'Become a Founder' : 'Budi među prvima');
+
+    const orangeColor = Color(0xFFE5A035);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: featured ? Border.all(color: Colors.orange.shade400, width: 2) : null,
+        border: Border.all(color: orangeColor.withValues(alpha: 0.8), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: featured
-                ? Colors.orange.withValues(alpha: 0.12)
-                : Colors.black.withValues(alpha: 0.06),
-            blurRadius: featured ? 16 : 12,
+            color: orangeColor.withValues(alpha: 0.08),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
@@ -574,84 +606,80 @@ class _PlanCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (featured)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: const BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: const BoxDecoration(
+              color: orangeColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              child: Center(
-                child: Text(
-                  package.title(isEn).toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
+            ),
+            child: Center(
+              child: Text(
+                ribbonTag,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
+          ),
 
           Padding(
-            padding: EdgeInsets.fromLTRB(18, featured ? 16 : 18, 18, 20),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  planTitle,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            package.title(isEn),
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              '€${_formatPrice(package.priceYearly / 12)}/mo billed yearly',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ),
-                        ],
+                    Text(
+                      isEn ? '€$priceStr' : '$priceStr €',
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF4F46E5),
+                        height: 1,
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '€${_formatPrice(price)}',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: featured ? Apptheme.bluecolor : Colors.black87,
-                            height: 1,
-                          ),
-                        ),
-                        const Text(
-                          'per year',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
+                    const SizedBox(width: 4),
+                    Text(
+                      perMonthUnit,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4F46E5),
+                      ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  billingLine,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
 
-                if (package.features(isEn).isNotEmpty) ...[
+                if (featuresList.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  ...package.features(isEn).map((f) => _Feature(f)),
+                  ...featuresList.map((f) => _Feature(f)),
                 ],
 
                 const SizedBox(height: 18),
@@ -663,9 +691,10 @@ class _PlanCard extends StatelessWidget {
                           onPressed: null,
                           style: ElevatedButton.styleFrom(
                             disabledBackgroundColor: Colors.green.shade50,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
                           child: Row(
@@ -675,7 +704,7 @@ class _PlanCard extends StatelessWidget {
                                   color: Colors.green.shade600, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                'Current plan',
+                                isEn ? 'Current plan' : 'Trenutni plan',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
@@ -685,39 +714,22 @@ class _PlanCard extends StatelessWidget {
                             ],
                           ),
                         )
-                      : featured
-                      ? ElevatedButton(
+                      : ElevatedButton(
                           onPressed: () => _goToSummary(context),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: orangeColor,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
                           child: Text(
-                            'Get ${package.title(isEn)}',
+                            buttonText,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                            ),
-                          ),
-                        )
-                      : OutlinedButton(
-                          onPressed: () => _goToSummary(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: Text(
-                            'Select ${package.title(isEn)}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87,
                             ),
                           ),
                         ),

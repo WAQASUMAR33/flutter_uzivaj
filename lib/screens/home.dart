@@ -2271,19 +2271,19 @@ class CategoriesScreen extends StatelessWidget {
                     const SizedBox(width: 4),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          'Categories',
-                          style: TextStyle(
+                          isEn ? 'Categories' : 'Kategorije',
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Browse by type',
-                          style: TextStyle(
+                          isEn ? 'Browse by type' : 'Istraži kategorije',
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
                             color: Colors.white70,
@@ -2333,9 +2333,9 @@ class CategoriesScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'FEATURED',
-                                    style: TextStyle(
+                                  Text(
+                                    isEn ? 'FEATURED' : 'IZDVOJENO',
+                                    style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white70,
@@ -2353,7 +2353,9 @@ class CategoriesScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '$featuredCount places available',
+                                    isEn
+                                        ? '$featuredCount ${featuredCount == 1 ? 'place' : 'places'} available'
+                                        : '$featuredCount ${featuredCount == 1 ? 'mjesto dostupno' : 'mjesta dostupno'}',
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.white70,
@@ -2616,7 +2618,9 @@ class CategoriesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '$count places',
+              isEn
+                  ? '$count ${count == 1 ? 'place' : 'places'}'
+                  : '$count ${count == 1 ? 'mjesto' : 'mjesta'}',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
           ],
