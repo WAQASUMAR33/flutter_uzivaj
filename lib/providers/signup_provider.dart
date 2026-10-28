@@ -1,11 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException;
-import '/services/authService.dart';
 import '/services/apiService.dart';
 import '/services/userStorageService.dart';
 
 class SignupProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
   final UserStorageService _storage = UserStorageService();
 
@@ -31,6 +29,12 @@ class SignupProvider extends ChangeNotifier {
     }
   }
 
+  String _generateUid() {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    final rnd = Random.secure();
+    return List.generate(28, (_) => chars[rnd.nextInt(chars.length)]).join();
+  }
+
   Future<bool> register({
     required String fullname,
     required String email,
@@ -43,23 +47,7 @@ class SignupProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      String? uid;
-      try {
-        final credential = await _authService.signUpWithEmail(email, password);
-        uid = credential.user?.uid;
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'email-already-in-use') {
-          // If already in Firebase Auth from a previous interrupted registration attempt, fetch existing UID
-          try {
-            final credential = await _authService.signInWithEmail(email, password);
-            uid = credential.user?.uid;
-          } catch (_) {}
-        } else {
-          debugPrint('Firebase signUpWithEmail notice: $e');
-        }
-      } catch (e) {
-        debugPrint('Firebase signUpWithEmail non-fatal: $e');
-      }
+      final uid = _generateUid();
 
       await _apiService.register(
         fullname: fullname,
@@ -69,13 +57,10 @@ class SignupProvider extends ChangeNotifier {
         nationality: nationality,
         dateOfBirth: dateOfBirth,
         gender: _selectedGender.toLowerCase(),
-        uid: uid ?? '',
+        uid: uid,
       );
 
-      // Do not save user session as logged in yet; email verification is required
-      try {
-        await _authService.signOut();
-      } catch (_) {}
+      // Clear any cached session; user needs to verify email or log in
       await _storage.clearUser();
 
       _isLoading = false;
@@ -83,8 +68,11 @@ class SignupProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       final err = e.toString().replaceAll('Exception: ', '');
-      if (err.contains('Failed to fetch') || err.contains('ClientException') || err.contains('HandshakeException')) {
-        _error = 'Unable to connect to server. Please check your network connection.';
+      if (err.contains('Failed to fetch') ||
+          err.contains('ClientException') ||
+          err.contains('HandshakeException')) {
+        _error =
+            'Unable to connect to server. Please check your network connection.';
       } else {
         _error = err;
       }
