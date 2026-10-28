@@ -11,12 +11,25 @@ import '/firebaseOptions.dart';
 import '/providers/authProvider.dart';
 import '/screens/splash.dart';
 import '/utils/navigator_key.dart';
+import 'dart:io' show HttpOverrides, HttpClient, SecurityContext, X509Certificate;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '/config/stripe_config.dart';
 
+class _AppHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    HttpOverrides.global = _AppHttpOverrides();
+  }
   try {
     Stripe.publishableKey = StripeConfig.publishableKey;
     if (!kIsWeb) {
