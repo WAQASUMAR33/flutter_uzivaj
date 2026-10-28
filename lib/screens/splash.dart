@@ -166,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: AnimatedBuilder(
                     animation: _smileyDraw,
                     builder: (_, __) => CustomPaint(
-                      size: const Size(200, 120),
+                      size: const Size(240, 110),
                       painter: SmileyPainter(
                         color: Apptheme.ambercolor,
                         progress: _smileyDraw.value,
@@ -206,21 +206,20 @@ class SmileyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Thicker + more compact to match the brand smiley (the accent above the Z)
+    // Wide, prominent smile matching the brand accent in the logo
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.height * 0.34
+      ..strokeWidth = 26.0
       ..strokeCap = StrokeCap.round;
 
-    // Narrower horizontal span + deeper bowl = less long, more proportionate
     final path = Path();
-    path.moveTo(size.width * 0.22, size.height * 0.40);
+    path.moveTo(size.width * 0.10, size.height * 0.30);
     path.quadraticBezierTo(
-      size.width * 0.5,
+      size.width * 0.50,
       size.height * 0.92,
-      size.width * 0.78,
-      size.height * 0.40,
+      size.width * 0.90,
+      size.height * 0.30,
     );
 
     // Draw only the traced portion so the smile appears to be sketched on
