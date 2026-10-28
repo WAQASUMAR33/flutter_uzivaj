@@ -28,7 +28,7 @@ String joinImageUrl(String base, String name) {
 /// the image with CORS headers attached. Native platforms aren't affected by
 /// CORS, so the URL is returned unchanged there.
 String webSafeImageUrl(String url) {
-  if (!kIsWeb || url.contains('images.weserv.nl')) return url;
+  if (!kIsWeb || url.contains('images.weserv.nl') || url.contains('uzivajlife.online')) return url;
   final stripped = url.replaceFirst(RegExp(r'^https?://'), '');
   return 'https://images.weserv.nl/?url=${Uri.encodeComponent(stripped)}';
 }
