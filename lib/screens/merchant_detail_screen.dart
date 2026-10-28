@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '/theme/app_theme.dart';
@@ -337,56 +338,66 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                   height: 280 + topPadding,
                   child: Stack(
                     children: [
-                      // PageView with fully bounded constraints (no swipe, no auto-scroll)
+                      // PageView with finger swipe enabled
                       Positioned.fill(
                         child: images.isNotEmpty
-                            ? PageView.builder(
-                                controller: _pageController,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: images.length,
-                                onPageChanged: (i) {
-                                  setState(() => _currentImageIndex = i);
-                                },
-                                itemBuilder: (_, i) => CachedNetworkImage(
-                                  imageUrl: images[i],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  placeholder: (_, __) => Container(
-                                    color: Colors.grey.shade200,
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 32,
-                                        height: 32,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Apptheme.bluecolor.withValues(
-                                            alpha: 0.6,
+                            ? ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.trackpad,
+                                    PointerDeviceKind.stylus,
+                                  },
+                                ),
+                                child: PageView.builder(
+                                  controller: _pageController,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: images.length,
+                                  onPageChanged: (i) {
+                                    setState(() => _currentImageIndex = i);
+                                  },
+                                  itemBuilder: (_, i) => CachedNetworkImage(
+                                    imageUrl: images[i],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    placeholder: (_, __) => Container(
+                                      color: Colors.grey.shade200,
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Apptheme.bluecolor.withValues(
+                                              alpha: 0.6,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  errorWidget: (_, __, ___) => Container(
-                                    color: Colors.grey.shade300,
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.image_not_supported_outlined,
-                                          color: Colors.grey.shade500,
-                                          size: 40,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Image unavailable',
-                                          style: TextStyle(
+                                    errorWidget: (_, __, ___) => Container(
+                                      color: Colors.grey.shade300,
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.image_not_supported_outlined,
                                             color: Colors.grey.shade500,
-                                            fontSize: 12,
+                                            size: 40,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Image unavailable',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade500,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
