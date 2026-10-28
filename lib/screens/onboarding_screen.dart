@@ -241,16 +241,13 @@ class _Slide1Top extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CustomPaint(
-            size: const Size(220, 140),
-            painter: _SmileyPainter(color: Apptheme.ambercolor),
-          ),
-          const SizedBox(height: 28),
-          Image.asset('assets/SVG/uzivaj_logo.png', height: 110),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Image.asset(
+          'assets/SVG/uzivaj_logo.png',
+          height: 120,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
@@ -402,26 +399,3 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
-// ── Smiley arc painter ────────────────────────────────────────────────────────
-
-class _SmileyPainter extends CustomPainter {
-  final Color color;
-  const _SmileyPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 18.0
-      ..strokeCap = StrokeCap.round;
-    final path = Path()
-      ..moveTo(size.width * 0.1, size.height * 0.3)
-      ..quadraticBezierTo(
-          size.width * 0.5, size.height * 1.0, size.width * 0.9, size.height * 0.3);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

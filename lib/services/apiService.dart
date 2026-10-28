@@ -368,17 +368,20 @@ class ApiService {
     required int customerId,
     required int merchantId,
     required int rating,
-    required String review,
+    String? review,
   }) async {
+    final Map<String, dynamic> body = {
+      'customerId': customerId,
+      'merchantId': merchantId,
+      'rating': rating,
+    };
+    if (review != null && review.isNotEmpty) {
+      body['review'] = review;
+    }
     final response = await _Http.post(
       Uri.parse('$_baseUrl/api/merchants/rate'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'customerId': customerId,
-        'merchantId': merchantId,
-        'rating': rating,
-        'review': review,
-      }),
+      body: jsonEncode(body),
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) return data;

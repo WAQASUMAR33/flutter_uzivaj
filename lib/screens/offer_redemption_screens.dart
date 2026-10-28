@@ -364,22 +364,13 @@ class _OfferRedeemedScreenState extends State<OfferRedeemedScreen> {
   final UserStorageService _storage = UserStorageService();
   bool _showRatingModal = true;
   int _selectedRating = 5;
-  String? _selectedReview;
   bool _isSubmitting = false;
   bool _hasSubmitted = false;
   double? _updatedAvgRating;
   int? _updatedRatingCount;
 
-  static const List<String> _validReviews = [
-    'Amazing!',
-    'Great!',
-    'Good',
-    'Okay',
-    'Not great',
-  ];
-
   Future<void> _submitRating() async {
-    if (_selectedReview == null) return;
+    if (_selectedRating < 1) return;
 
     final customer = await _storage.getUser();
     if (customer == null) return;
@@ -393,7 +384,6 @@ class _OfferRedeemedScreenState extends State<OfferRedeemedScreen> {
         customerId: customerId,
         merchantId: widget.merchantId,
         rating: _selectedRating,
-        review: _selectedReview!,
       );
       setState(() {
         _hasSubmitted = true;
@@ -672,48 +662,7 @@ class _OfferRedeemedScreenState extends State<OfferRedeemedScreen> {
                     );
                   }),
                 ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: _validReviews.map((review) {
-                    final isSelected = _selectedReview == review;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedReview = review),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Apptheme.bluecolor.withValues(alpha: 0.1)
-                              : Apptheme.offwhitecolor,
-                          border: Border.all(
-                            color: isSelected
-                                ? Apptheme.bluecolor
-                                : Colors.transparent,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          review,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Apptheme.bluecolor
-                                : Apptheme.blackcolor,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 Row(
                   children: [
                     Expanded(
@@ -740,7 +689,7 @@ class _OfferRedeemedScreenState extends State<OfferRedeemedScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _selectedReview == null || _isSubmitting
+                        onPressed: _selectedRating == 0 || _isSubmitting
                             ? null
                             : _submitRating,
                         style: ElevatedButton.styleFrom(
