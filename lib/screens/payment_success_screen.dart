@@ -154,7 +154,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                               _SummaryRow(
                                 label: 'Paid today',
                                 value:
-                                    '€${totalPaid.toStringAsFixed(2)} incl. VAT',
+                                    '€${totalPaid.toStringAsFixed(2)}',
                               ),
                               _SummaryRow(
                                 label: 'Renews',

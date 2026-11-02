@@ -70,9 +70,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
           ? (_promoData!['discountAmount'] as num).toDouble()
           : 0.0;
 
-  double get _vat => _effectiveBase * 0.25;
-
-  double get _total => _effectiveBase + _vat;
+  double get _total => _effectiveBase;
 
   Future<void> _applyPromoCode() async {
     final code = _promoController.text.trim();
@@ -548,12 +546,6 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                             ],
                           ),
                         ],
-
-                        const SizedBox(height: 10),
-                        _BillingRow(
-                          label: 'VAT (25%)',
-                          amount: '€${_fmtDec(_vat)}',
-                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           child: Divider(color: Colors.grey.shade200, height: 1),
@@ -575,7 +567,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                                 // Show strikethrough original if discounted
                                 if (_promoData != null)
                                   Text(
-                                    '€${_fmtDec(_basePrice * 1.25)}',
+                                    '€${_fmtDec(_basePrice)}',
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey,
