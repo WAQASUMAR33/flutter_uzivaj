@@ -302,7 +302,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
       throw const ApiException('Failed to receive Stripe client secret from server');
     }
 
-    // 2. Initialize Payment Sheet with Google Pay & Apple Pay
+    // 2. Initialize Payment Sheet with Google Pay
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: clientSecret,
@@ -314,11 +314,6 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
           currencyCode: 'EUR',
           testEnv: StripeConfig.isTestMode,
         ),
-        applePay: (!kIsWeb && Platform.isIOS && StripeConfig.applePayMerchantId != null)
-            ? const PaymentSheetApplePay(
-                merchantCountryCode: 'HR',
-              )
-            : null,
         style: ThemeMode.light,
         appearance: const PaymentSheetAppearance(
           colors: PaymentSheetAppearanceColors(
