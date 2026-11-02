@@ -53,6 +53,8 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
 
   // ── Promo code helpers ───────────────────────────────────────────────────
 
+  String get _planType => _isMonthly ? 'MONTHLY' : 'ANNUAL';
+
   bool get _isMonthly =>
       widget.package.titleEn.toLowerCase().contains('monthly') ||
       widget.package.titleHr.toLowerCase().contains('mjesečno');
@@ -223,7 +225,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
     // 1. Create Stripe Checkout Session on backend
     final sessionData = await ApiService().createStripeCheckoutSession(
       customerId: customerId,
-      plan: 'ANNUAL',
+      plan: _planType,
       subscriptionPackageId: pkg.id,
       promoCode: promoStr.isNotEmpty ? promoStr : null,
       customerEmail: _user?['email']?.toString(),
@@ -256,6 +258,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
         sessionId: sessionId ?? '',
         customerId: customerId,
         package: pkg,
+        plan: _planType,
         total: total,
         isEn: isEn,
         promoCode: promoStr.isNotEmpty ? promoStr : null,
@@ -285,7 +288,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
     // 1. Create Payment Intent & Mobile Credentials from backend
     final intentData = await ApiService().createStripePaymentIntent(
       customerId: customerId,
-      plan: 'ANNUAL',
+      plan: _planType,
       subscriptionPackageId: pkg.id,
       promoCode: promoStr.isNotEmpty ? promoStr : null,
     );
@@ -299,13 +302,21 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
       throw const ApiException('Failed to receive Stripe client secret from server');
     }
 
-    // 2. Initialize Payment Sheet
+    // 2. Initialize Payment Sheet with Google Pay & Apple Pay
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: clientSecret,
         customerEphemeralKeySecret: customerEphemeralKeySecret,
         customerId: stripeCustomerId,
         merchantDisplayName: StripeConfig.merchantDisplayName,
+        googlePay: PaymentSheetGooglePay(
+          merchantCountryCode: 'HR',
+          currencyCode: 'EUR',
+          testEnv: StripeConfig.isTestMode,
+        ),
+        applePay: const PaymentSheetApplePay(
+          merchantCountryCode: 'HR',
+        ),
         style: ThemeMode.light,
         appearance: const PaymentSheetAppearance(
           colors: PaymentSheetAppearanceColors(
@@ -324,7 +335,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
     final subscription = await ApiService().createSubscription(
       customerId: customerId,
       subscriptionPackageId: pkg.id,
-      plan: 'ANNUAL',
+      plan: _planType,
       paymentRef: paymentRef,
       platform: platform,
       promoCode: promoStr.isNotEmpty ? promoStr : null,
@@ -469,11 +480,11 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Apptheme.ambercolor,
+                                color: _isMonthly ? Apptheme.bluecolor : Apptheme.ambercolor,
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text(
-                                'Price locked forever',
+                              child: Text(
+                                _isMonthly ? 'Cancel anytime' : 'Price locked forever',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -593,8 +604,10 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text(
-                            "Auto-renews on the same date next year. You'll receive a reminder 30 days before. Cancel anytime in Profile → Subscription.",
+                          child: Text(
+                            _isMonthly
+                                ? "Auto-renews on the same date next month. Cancel anytime in Profile → Subscription."
+                                : "Auto-renews on the same date next year. You'll receive a reminder 30 days before. Cancel anytime in Profile → Subscription.",
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,
@@ -665,7 +678,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                               style: TextStyle(
                                   fontSize: 12.5,
                                   color: Colors.black87,
@@ -673,7 +686,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                               children: [
                                 TextSpan(
                                     text:
-                                        "Your membership renews automatically each year. We'll email you "),
+                                        _isMonthly ? "Your membership renews automatically each month. We'll email you " : "Your membership renews automatically each year. We'll email you "),
                                 TextSpan(
                                   text: '30 days before',
                                   style:
@@ -1079,6 +1092,7 @@ class _StripeWebCheckoutDialog extends StatefulWidget {
   final String sessionId;
   final int customerId;
   final SubscriptionPackage package;
+  final String plan;
   final double total;
   final bool isEn;
   final String? promoCode;
@@ -1089,6 +1103,7 @@ class _StripeWebCheckoutDialog extends StatefulWidget {
     required this.sessionId,
     required this.customerId,
     required this.package,
+    required this.plan,
     required this.total,
     required this.isEn,
     required this.promoCode,
@@ -1143,7 +1158,7 @@ class _StripeWebCheckoutDialogState extends State<_StripeWebCheckoutDialog> {
         final sub = await ApiService().createSubscription(
           customerId: widget.customerId,
           subscriptionPackageId: widget.package.id,
-          plan: 'ANNUAL',
+          plan: widget.plan,
           paymentRef: widget.sessionId,
           platform: 'web',
           promoCode: widget.promoCode,
