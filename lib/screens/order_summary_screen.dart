@@ -314,9 +314,11 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
           currencyCode: 'EUR',
           testEnv: StripeConfig.isTestMode,
         ),
-        applePay: const PaymentSheetApplePay(
-          merchantCountryCode: 'HR',
-        ),
+        applePay: (!kIsWeb && Platform.isIOS && StripeConfig.applePayMerchantId != null)
+            ? const PaymentSheetApplePay(
+                merchantCountryCode: 'HR',
+              )
+            : null,
         style: ThemeMode.light,
         appearance: const PaymentSheetAppearance(
           colors: PaymentSheetAppearanceColors(
