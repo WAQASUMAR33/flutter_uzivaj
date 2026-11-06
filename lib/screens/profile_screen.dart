@@ -3,12 +3,14 @@ import 'package:country_picker/country_picker.dart';
 import '/theme/app_theme.dart';
 import '/services/userStorageService.dart';
 import '/services/apiService.dart';
+import '/services/app_events.dart';
 import '/screens/subscription_screen.dart';
 import '/screens/onboarding_screen.dart';
 import '/l10n/app_strings.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int refreshTrigger;
+  const ProfileScreen({super.key, this.refreshTrigger = 0});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -25,6 +27,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadData();
+    AppEvents.offerRedeemedNotifier.addListener(_onOfferRedeemed);
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshTrigger != oldWidget.refreshTrigger) {
+      _loadData(silent: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    AppEvents.offerRedeemedNotifier.removeListener(_onOfferRedeemed);
+    super.dispose();
+  }
+
+  void _onOfferRedeemed() {
+    _loadData(silent: true);
   }
 
   Future<void> _openEditSheet() async {
@@ -41,12 +62,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent && mounted && _userData == null) {
+      setState(() => _loading = true);
+    }
+
     final user = await UserStorageService().getUser();
     if (!mounted) return;
     setState(() => _userData = user);
 
-    final customerId = user?['id'] as int?;
+    final rawId = user?['id'] ?? user?['customerId'];
+    final customerId = rawId is num
+        ? rawId.toInt()
+        : (rawId != null ? int.tryParse(rawId.toString()) : null);
+
     if (customerId != null) {
       try {
         final status = await ApiService().getSubscriptionStatus(
@@ -61,6 +90,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           customerId: customerId,
         );
         final redemptions = (historyData['redemptions'] as List?) ?? [];
+        final totalCount =
+            (historyData['total'] as num?)?.toInt() ?? redemptions.length;
         double savings = 0;
         for (final item in redemptions) {
           final s = item['savings'];
@@ -71,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           setState(() {
             _totalSavings = savings;
-            _totalOffersUsed = redemptions.length;
+            _totalOffersUsed = totalCount;
           });
         }
       } catch (_) {}

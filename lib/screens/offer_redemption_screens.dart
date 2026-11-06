@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/theme/app_theme.dart';
 import '/services/apiService.dart';
 import '/services/userStorageService.dart';
+import '/services/app_events.dart';
 import '/l10n/app_strings.dart';
 
 class PinEntryScreen extends StatefulWidget {
@@ -66,7 +67,10 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
       }
 
       final customer = await _storage.getUser();
-      final customerId = customer?['id'] as int?;
+      final rawId = customer?['id'] ?? customer?['customerId'];
+      final customerId = rawId is num
+          ? rawId.toInt()
+          : (rawId != null ? int.tryParse(rawId.toString()) : null);
       if (customerId == null) {
         _showInvalidCode();
         return;
@@ -76,6 +80,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
         customerId: customerId,
         offerId: widget.offerId,
       );
+      AppEvents.notifyOfferRedeemed();
 
       if (!mounted) return;
       Navigator.pushReplacement(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/theme/app_theme.dart';
 import '/services/userStorageService.dart';
 import '/services/apiService.dart';
+import '/services/app_events.dart';
 import 'package:provider/provider.dart';
 import '/providers/locale_provider.dart';
 
@@ -21,12 +22,22 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
   void initState() {
     super.initState();
     _load();
+    AppEvents.offerRedeemedNotifier.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    AppEvents.offerRedeemedNotifier.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
     try {
       final user = await UserStorageService().getUser();
-      final customerId = user?['id'] as int?;
+      final rawId = user?['id'] ?? user?['customerId'];
+      final customerId = rawId is num
+          ? rawId.toInt()
+          : (rawId != null ? int.tryParse(rawId.toString()) : null);
       if (customerId == null) throw Exception('Not logged in');
 
       final data = await ApiService().getRedeemHistory(customerId: customerId);

@@ -9,6 +9,7 @@ import '/providers/login_provider.dart';
 import '/providers/locale_provider.dart';
 import '/services/userStorageService.dart';
 import '/services/apiService.dart';
+import '/services/app_events.dart';
 import '/screens/login.dart';
 import '/screens/profile_screen.dart';
 import '/screens/merchant_detail_screen.dart';
@@ -186,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 0;
   String _searchQuery = '';
   int _prevBottomIndex = 0;
+  int _profileRefreshTrigger = 0;
 
   Map<String, dynamic>? _userData;
   bool _isLoggedIn = false;
@@ -221,10 +223,19 @@ class _HomeScreenState extends State<HomeScreen> {
         () => _searchQuery = _searchController.text.trim().toLowerCase(),
       );
     });
+    AppEvents.offerRedeemedNotifier.addListener(_onOfferRedeemed);
+  }
+
+  void _onOfferRedeemed() {
+    _loadData();
+    if (mounted) {
+      setState(() => _profileRefreshTrigger++);
+    }
   }
 
   @override
   void dispose() {
+    AppEvents.offerRedeemedNotifier.removeListener(_onOfferRedeemed);
     _searchController.dispose();
     super.dispose();
   }
@@ -425,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Tab 2 — Nearby
           const _NearbyTab(),
           // Tab 3 — Profile
-          const ProfileScreen(),
+          ProfileScreen(refreshTrigger: _profileRefreshTrigger),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(l),
@@ -771,6 +782,9 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _prevBottomIndex = _bottomIndex;
             _bottomIndex = i;
+            if (i == 3) {
+              _profileRefreshTrigger++;
+            }
           });
           // If entering search tab, refresh data
           if (i == 1 && _prevBottomIndex != 1) {
@@ -970,6 +984,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     close();
                     setState(() {
                       _bottomIndex = 3;
+                      _profileRefreshTrigger++;
                     });
                   },
                 ),
