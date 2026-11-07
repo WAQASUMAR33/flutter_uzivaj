@@ -482,19 +482,21 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                               ),
                               child: Text(
                                 _isMonthly ? 'Cancel anytime' : 'Price locked forever',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              '€${_fmtDec(_basePrice / 12)}/month',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey),
-                            ),
+                            if (!_isMonthly) ...[
+                              const SizedBox(width: 10),
+                              Text(
+                                '€${_fmtDec(_basePrice / 12)}/month',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
                           ],
                         ),
                         if (pkg.features(isEn).isNotEmpty) ...[
@@ -752,11 +754,14 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                   // ── Payment method badges ──────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      _PaymentBadge('VISA'),
-                      _PaymentBadge('MC'),
-                      _PaymentBadge('AMEX'),
-                      _PaymentBadge('Apple Pay'),
+                    children: [
+                      const _PaymentBadge('VISA'),
+                      const _PaymentBadge('MC'),
+                      const _PaymentBadge('AMEX'),
+                      if (!kIsWeb && Platform.isIOS)
+                        const _PaymentBadge('Apple Pay')
+                      else
+                        const _PaymentBadge('Google Pay'),
                     ],
                   ),
                   const SizedBox(height: 20),
