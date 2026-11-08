@@ -459,14 +459,29 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                                 ),
                               ),
                             ),
-                            Text(
-                              '€${_fmt(_basePrice)}',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                color: Apptheme.bluecolor,
-                                height: 1,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '€${_isMonthly ? _fmt(_basePrice) : _fmtDec(_basePrice / 12)}',
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    color: Apptheme.bluecolor,
+                                    height: 1,
+                                  ),
+                                ),
+                                Text(
+                                  isEn ? '/month' : '/mj.',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Apptheme.bluecolor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -481,7 +496,9 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                _isMonthly ? 'Cancel anytime' : 'Price locked forever',
+                                _isMonthly
+                                    ? (isEn ? 'Cancel anytime' : 'Otkaži bilo kada')
+                                    : (isEn ? 'Price locked forever' : 'Cijena ostaje trajno'),
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -492,7 +509,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                             if (!_isMonthly) ...[
                               const SizedBox(width: 10),
                               Text(
-                                '€${_fmtDec(_basePrice / 12)}/month',
+                                isEn ? 'Billed annually (€${_fmt(_basePrice)})' : 'Godišnje (€${_fmt(_basePrice)})',
                                 style: const TextStyle(
                                     fontSize: 12, color: Colors.grey),
                               ),
@@ -520,7 +537,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _BillingRow(
-                          label: '${pkg.title(isEn)} membership',
+                          label: '${pkg.title(isEn)} ${isEn ? 'membership' : 'članstvo'}',
                           amount: '€${_fmtDec(_basePrice)}',
                         ),
 
