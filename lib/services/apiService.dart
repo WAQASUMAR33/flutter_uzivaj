@@ -180,6 +180,36 @@ class ApiService {
     throw ApiException(data['message']?.toString() ?? 'Failed to load subscription status');
   }
 
+  Future<Map<String, dynamic>> cancelSubscription({
+    required int customerId,
+  }) async {
+    http.Response response;
+    try {
+      response = await _Http.post(
+        Uri.parse('$_baseUrl/api/subscriptions/cancel'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'customerId': customerId}),
+        checkInternet: false,
+      );
+      if (response.statusCode == 404) {
+        response = await _Http.post(
+          Uri.parse('$_devBaseUrl/api/subscriptions/cancel'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'customerId': customerId}),
+        );
+      }
+    } catch (_) {
+      response = await _Http.post(
+        Uri.parse('$_devBaseUrl/api/subscriptions/cancel'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'customerId': customerId}),
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200 || response.statusCode == 201) return data;
+    throw ApiException(data['error']?.toString() ?? data['message']?.toString() ?? 'Failed to cancel subscription');
+  }
+
   Future<Map<String, dynamic>> createSubscription({
     required int customerId,
     required int subscriptionPackageId,

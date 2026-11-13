@@ -21,6 +21,7 @@ class SubscriptionScreen extends StatefulWidget {
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   List<SubscriptionPackage> _packages = [];
   bool _loading = true;
+  bool _cancelling = false;
   String? _error;
   int? _ownedPackageId;
   Map<String, dynamic>? _subStatus;
@@ -63,10 +64,105 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             if (pkgId != null) {
               _ownedPackageId = pkgId;
             }
+          } else {
+            _ownedPackageId = null;
           }
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _confirmCancelSubscription(BuildContext context, bool isEn) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isEn ? 'Cancel Subscription?' : 'Otkaži pretplatu?',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          isEn
+              ? 'Are you sure you want to cancel your subscription? Your access will remain active until the end of your billing period, and your card will not be charged again.'
+              : 'Jeste li sigurni da želite otkazati pretplatu? Vaš pristup ostaje aktivan do kraja obračunskog razdoblja, i više vam se neće naplaćivati.',
+          style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              isEn ? 'Keep Subscription' : 'Zadrži pretplatu',
+              style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              isEn ? 'Yes, Cancel' : 'Da, otkaži',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _cancelSubscription(isEn);
+    }
+  }
+
+  Future<void> _cancelSubscription(bool isEn) async {
+    setState(() => _cancelling = true);
+    try {
+      final user = await UserStorageService().getUser();
+      final id = (user?['id'] as num?)?.toInt();
+      if (id == null) {
+        throw Exception(isEn ? 'Please log in again.' : 'Molimo prijavite se ponovno.');
+      }
+      await ApiService().cancelSubscription(customerId: id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEn
+                  ? 'Your subscription has been cancelled.'
+                  : 'Vaša pretplata je otkazana.',
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        await _fetchOwnedPackage();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', ''),
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cancelling = false);
+      }
+    }
   }
 
   Future<void> _fetchPackages() async {
@@ -428,12 +524,52 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           Text(
             l.annualNoAutoRenewal,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Cancel Subscription Option ─────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _cancelling
+                  ? null
+                  : () => _confirmCancelSubscription(context, isEn),
+              icon: _cancelling
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.red,
+                      ),
+                    )
+                  : const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+              label: Text(
+                _cancelling
+                    ? (isEn ? 'Cancelling...' : 'Otkazivanje...')
+                    : (isEn ? 'Cancel Subscription' : 'Otkaži pretplatu'),
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.red.shade200, width: 1.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
