@@ -193,6 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   CustomTextField(
                     title: l.fullNameLabel,
+                    isRequired: true,
                     labelText: l.fullNameHint,
                     controller: _fullnameController,
                     keyboardType: TextInputType.name,
@@ -202,6 +203,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   CustomTextField(
                     title: l.emailLabel,
+                    isRequired: true,
                     labelText: 'your@email.com',
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -223,8 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       FormField<Country>(
                         key: _nationalityFieldKey,
                         initialValue: _selectedNationality,
-                        validator: (_) =>
-                            _selectedNationality == null ? l.nationalityRequired : null,
+                        validator: null,
                         builder: (field) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -302,18 +303,17 @@ class _SignupScreenState extends State<SignupScreen> {
                       }
                     },
                     validator: (value) {
-                      if (_selectedNationality == null) {
-                        return l.selectNationality;
-                      }
                       if (value == null || value.trim().isEmpty) {
-                        return l.mobileRequired;
+                        return null; // Optional
                       }
-                      final expectedPrefix = '+${_selectedNationality!.phoneCode}';
-                      final cleaned = value.replaceAll(RegExp(r'\s+'), '');
-                      final expectedCleanedPrefix = expectedPrefix.replaceAll(RegExp(r'\s+'), '');
-                      if (!cleaned.startsWith(expectedCleanedPrefix) ||
-                          cleaned.length <= expectedCleanedPrefix.length + 3) {
-                        return l.mobileInvalid;
+                      if (_selectedNationality != null) {
+                        final expectedPrefix = '+${_selectedNationality!.phoneCode}';
+                        final cleaned = value.replaceAll(RegExp(r'\s+'), '');
+                        final expectedCleanedPrefix = expectedPrefix.replaceAll(RegExp(r'\s+'), '');
+                        if (!cleaned.startsWith(expectedCleanedPrefix) ||
+                            cleaned.length <= expectedCleanedPrefix.length + 3) {
+                          return l.mobileInvalid;
+                        }
                       }
                       return null;
                     },
@@ -339,8 +339,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         });
                       }
                     },
-                    validator: (value) =>
-                        (value == null || value.isEmpty) ? l.dobRequired : null,
+                    validator: null,
                   ),
                   Text(l.genderLabel,
                       style: const TextStyle(
@@ -364,6 +363,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   CustomTextField(
                     title: l.passwordLabel,
+                    isRequired: true,
                     labelText: l.createStrongPassword,
                     controller: _passwordController,
                     keyboardType: TextInputType.visiblePassword,
@@ -387,6 +387,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   CustomTextField(
                     title: l.confirmPasswordLabel,
+                    isRequired: true,
                     labelText: l.repeatPassword,
                     controller: _confirmPasswordController,
                     keyboardType: TextInputType.visiblePassword,
@@ -455,12 +456,6 @@ class _SignupScreenState extends State<SignupScreen> {
                             ? null
                             : () async {
                                 if (!_formKey.currentState!.validate()) return;
-                                if (provider.selectedGender.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(l.pleaseSelectGender)),
-                                  );
-                                  return;
-                                }
                                 if (!provider.agreedToTerms) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text(l.pleaseAgreeTerms)),
@@ -468,16 +463,26 @@ class _SignupScreenState extends State<SignupScreen> {
                                   return;
                                 }
 
-                                final parts = _dobController.text.split(' / ');
-                                final apiDob = '${parts[2]}-${parts[1]}-${parts[0]}';
+                                String? apiDob;
+                                if (_dobController.text.trim().isNotEmpty) {
+                                  final parts = _dobController.text.split(' / ');
+                                  if (parts.length == 3) {
+                                    apiDob = '${parts[2]}-${parts[1]}-${parts[0]}';
+                                  }
+                                }
 
                                 final success = await provider.register(
                                   fullname: _fullnameController.text.trim(),
                                   email: _emailController.text.trim(),
                                   password: _passwordController.text,
-                                  phoneNumber: _mobileController.text.trim(),
-                                  nationality: _selectedNationality!.name,
+                                  phoneNumber: _mobileController.text.trim().isNotEmpty
+                                      ? _mobileController.text.trim()
+                                      : null,
+                                  nationality: _selectedNationality?.name,
                                   dateOfBirth: apiDob,
+                                  gender: provider.selectedGender.isNotEmpty
+                                      ? provider.selectedGender
+                                      : null,
                                 );
 
                                 if (!context.mounted) return;
@@ -560,6 +565,7 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final bool readOnly;
   final VoidCallback? onTap;
+  final bool isRequired;
 
   const CustomTextField({
     super.key,
@@ -574,6 +580,7 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.readOnly = false,
     this.onTap,
+    this.isRequired = false,
   });
 
   @override
@@ -581,8 +588,20 @@ class CustomTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.grey)),
+        Text.rich(
+          TextSpan(
+            text: title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.grey),
+            children: isRequired
+                ? const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.red),
+                    ),
+                  ]
+                : null,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,

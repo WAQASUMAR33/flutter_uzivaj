@@ -32,29 +32,39 @@ class ApiService {
     required String fullname,
     required String email,
     required String password,
-    required String phoneNumber,
-    required String nationality,
-    required String dateOfBirth,
-    required String gender,
+    String? phoneNumber,
+    String? nationality,
+    String? dateOfBirth,
+    String? gender,
     required String uid,
     String imageUrl = '',
     String logType = 'email',
   }) async {
+    final Map<String, dynamic> payload = {
+      'fullname': fullname,
+      'email': email,
+      'password': password,
+      'uid': uid,
+      'imageUrl': imageUrl,
+      'logType': logType,
+    };
+    if (phoneNumber != null && phoneNumber.trim().isNotEmpty) {
+      payload['phoneNumber'] = phoneNumber.trim();
+    }
+    if (nationality != null && nationality.trim().isNotEmpty) {
+      payload['nationality'] = nationality.trim();
+    }
+    if (dateOfBirth != null && dateOfBirth.trim().isNotEmpty) {
+      payload['dateOfBirth'] = dateOfBirth.trim();
+    }
+    if (gender != null && gender.trim().isNotEmpty) {
+      payload['gender'] = gender.trim();
+    }
+
     final response = await _Http.post(
       Uri.parse('$_baseUrl/api/customers/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'fullname': fullname,
-        'email': email,
-        'password': password,
-        'phoneNumber': phoneNumber,
-        'nationality': nationality,
-        'dateOfBirth': dateOfBirth,
-        'gender': gender,
-        'imageUrl': imageUrl,
-        'uid': uid,
-        'logType': logType,
-      }),
+      body: jsonEncode(payload),
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) return data;

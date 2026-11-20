@@ -294,19 +294,135 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
   int get _ratingCount =>
       _merchantData['ratingCount'] as int? ?? (_offers.length * 47);
 
-  bool get _isOpen {
+  Map<String, dynamic> get _todayScheduleInfo {
     final now = DateTime.now();
-    return _offers.any((o) {
+    final weekday = now.weekday; // 1 = Monday, ..., 7 = Sunday
+    const dayKeys = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+    final todayKey = dayKeys[weekday - 1];
+
+    dynamic openingHoursRaw = _merchantData['openingHours'];
+    Map<String, dynamic>? sched;
+    if (openingHoursRaw is Map<String, dynamic>) {
+      sched = openingHoursRaw;
+    } else if (openingHoursRaw is String && openingHoursRaw.trim().isNotEmpty) {
       try {
-        final from = DateTime.parse(o['validFrom'] as String);
-        final until = DateTime.parse(o['validUntil'] as String);
-        return now.isAfter(from) &&
-            now.isBefore(until) &&
-            (o['isActive'] == true);
-      } catch (_) {
-        return false;
+        sched = jsonDecode(openingHoursRaw) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+
+    if (sched != null && sched.containsKey(todayKey)) {
+      final todayData = sched[todayKey];
+      if (todayData is Map<String, dynamic>) {
+        final bool isClosed = todayData['closed'] == true;
+        if (isClosed) {
+          return {
+            'isOpen': false,
+            'statusLabel': 'Closed',
+            'timing': 'Closed today',
+            'color': Colors.redAccent,
+          };
+        }
+
+        List<dynamic> slots = [];
+        if (todayData['slots'] is List && (todayData['slots'] as List).isNotEmpty) {
+          slots = todayData['slots'] as List;
+        } else if (todayData['open'] != null) {
+          slots = [todayData];
+        }
+
+        final nowMinutes = now.hour * 60 + now.minute;
+        bool currentlyOpen = false;
+        String timingStr = '';
+
+        for (final slot in slots) {
+          final openStr = slot['open']?.toString() ?? '09:00';
+          final closeStr = slot['close']?.toString() ?? '22:30';
+
+          final openParts = openStr.split(':');
+          final closeParts = closeStr.split(':');
+          final openMinutes = (int.tryParse(openParts[0]) ?? 9) * 60 +
+              (openParts.length > 1 ? (int.tryParse(openParts[1]) ?? 0) : 0);
+          int closeMinutes = (int.tryParse(closeParts[0]) ?? 22) * 60 +
+              (closeParts.length > 1 ? (int.tryParse(closeParts[1]) ?? 30) : 0);
+
+          if (closeMinutes < openMinutes) {
+            closeMinutes += 24 * 60; // spans past midnight
+          }
+
+          if (timingStr.isEmpty) {
+            timingStr = '$openStr - $closeStr';
+          } else {
+            timingStr += ', $openStr - $closeStr';
+          }
+
+          if (nowMinutes >= openMinutes && nowMinutes < closeMinutes) {
+            currentlyOpen = true;
+          }
+        }
+
+        return {
+          'isOpen': currentlyOpen,
+          'statusLabel': currentlyOpen ? 'Open' : 'Closed',
+          'timing': timingStr,
+          'color': currentlyOpen ? Colors.green : Colors.redAccent,
+        };
       }
-    });
+    }
+
+    // Fallback: Check workingHours & workingDays
+    final workingHours = _merchantData['workingHours']?.toString().trim() ?? '';
+    final workingDays = (_merchantData['workingDays'] ?? _merchantData['workingDaysEn'])?.toString().trim() ?? '';
+
+    bool isClosedToday = false;
+    if (workingDays.isNotEmpty) {
+      final wdLower = workingDays.toLowerCase();
+      if (weekday == 7 &&
+          (wdLower.contains('monday to friday') ||
+              wdLower.contains('monday - friday') ||
+              wdLower.contains('mon - fri') ||
+              wdLower.contains('monday - saturday') ||
+              wdLower.contains('mon - sat'))) {
+        isClosedToday = true;
+      } else if (weekday == 6 &&
+          (wdLower.contains('monday to friday') ||
+              wdLower.contains('monday - friday') ||
+              wdLower.contains('mon - fri'))) {
+        isClosedToday = true;
+      }
+    }
+
+    if (isClosedToday) {
+      return {
+        'isOpen': false,
+        'statusLabel': 'Closed',
+        'timing': 'Closed today',
+        'color': Colors.redAccent,
+      };
+    }
+
+    if (workingHours.isNotEmpty) {
+      return {
+        'isOpen': true,
+        'statusLabel': 'Open',
+        'timing': workingHours,
+        'color': Colors.green,
+      };
+    }
+
+    return {
+      'isOpen': true,
+      'statusLabel': 'Open',
+      'timing': '09:00 - 22:30',
+      'color': Colors.green,
+    };
   }
 
   @override
@@ -694,10 +810,11 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                                 _VerticalDivider(),
                                 _InfoItem(
                                   icon: Icons.access_time_outlined,
-                                  label: _isOpen ? l.openLabel : l.closedLabel,
-                                  color: _isOpen
-                                      ? Colors.green
-                                      : Colors.redAccent,
+                                  label: _todayScheduleInfo['isOpen'] == true ? l.openLabel : l.closedLabel,
+                                  subtitle: _todayScheduleInfo['isOpen'] == true
+                                      ? (_todayScheduleInfo['timing'] as String?)
+                                      : (_todayScheduleInfo['timing'] == 'Closed today' ? null : _todayScheduleInfo['timing'] as String?),
+                                  color: _todayScheduleInfo['color'] as Color,
                                 ),
                                 _VerticalDivider(),
                                 _InfoItem(
@@ -716,6 +833,53 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                             ),
                           ),
                         ),
+
+                        // Operating hours badge (if available)
+                        if ((_merchantData['workingHours']?.toString().isNotEmpty == true) ||
+                            (_merchantData['workingDays']?.toString().isNotEmpty == true) ||
+                            (_merchantData['workingDaysEn']?.toString().isNotEmpty == true))
+                          Container(
+                            margin: const EdgeInsets.only(top: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.schedule, size: 18, color: Apptheme.bluecolor),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if ((_merchantData['workingDays']?.toString().isNotEmpty == true) ||
+                                          (_merchantData['workingDaysEn']?.toString().isNotEmpty == true))
+                                        Text(
+                                          (_merchantData['workingDays'] ?? _merchantData['workingDaysEn']).toString(),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      if (_merchantData['workingHours']?.toString().isNotEmpty == true)
+                                        Text(
+                                          _merchantData['workingHours'].toString(),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 24),
 
                         // Offers header
@@ -757,9 +921,17 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
                             final offerId = offer['id'] as int? ?? 0;
                             final isRedeemed = _redeemedOfferIds.contains(offerId) || offer['isRedeemed'] == true;
                             final isSelected = _selectedOfferId == offerId;
+
+                            // Fallback to terms if description is empty so details are always visible
+                            final desc = (offer[isEn ? 'descriptionEn' : 'descriptionHr'] as String? ??
+                                          offer['description'] as String? ?? '').trim();
+                            final terms = (offer[isEn ? 'termsEn' : 'termsHr'] as String? ??
+                                           offer['terms'] as String? ?? '').trim();
+                            final offerDescription = desc.isNotEmpty ? desc : terms;
+
                             return _OfferCard(
                               title: offer[isEn ? 'titleEn' : 'titleHr'] as String? ?? offer['title'] as String? ?? '',
-                              subtitle: offer[isEn ? 'descriptionEn' : 'descriptionHr'] as String? ?? offer['description'] as String? ?? '',
+                              subtitle: offerDescription,
                               discount: offer[isEn ? 'discountEn' : 'discountHr'] as String? ?? offer['discount'] as String? ?? '',
                               offerAmount: offer['offerAmount'] as num?,
                               discountValue: offer['discountValue'] as num?,
@@ -866,6 +1038,7 @@ class _MerchantDetailScreenState extends State<MerchantDetailScreen>
 class _InfoItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final Color color;
   final bool disabled;
   final VoidCallback? onTap;
@@ -873,6 +1046,7 @@ class _InfoItem extends StatelessWidget {
   const _InfoItem({
     required this.icon,
     required this.label,
+    this.subtitle,
     required this.color,
     this.disabled = false,
     this.onTap,
@@ -885,7 +1059,7 @@ class _InfoItem extends StatelessWidget {
       child: InkWell(
         onTap: disabled ? null : onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -895,10 +1069,25 @@ class _InfoItem extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: c,
                 ),
+                textAlign: TextAlign.center,
               ),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
@@ -1055,12 +1244,18 @@ class _OfferCard extends StatelessWidget {
                       decorationColor: Colors.grey.shade400,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  // Description
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 12, color: subColor),
-                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    // Description below the offer title
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: subColor,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                   // Savings line
                   if (discountValue != null && !isRedeemed) ...[
                     const SizedBox(height: 5),

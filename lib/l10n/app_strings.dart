@@ -141,9 +141,9 @@ class AppStrings {
   String get mobileLabel => _isHR ? 'BROJ MOBITELA' : 'MOBILE NUMBER';
   String get dobLabel => _isHR ? 'DATUM ROĐENJA' : 'DATE OF BIRTH';
   String get dobHint => _isHR ? 'DD / MM / GGGG' : 'DD / MM / YYYY';
-  String get nationalityLabel => _isHR ? 'NACIONALNOST' : 'NATIONALITY';
+  String get nationalityLabel => _isHR ? 'DRŽAVA' : 'COUNTRY';
   String get selectNationality =>
-      _isHR ? 'Odaberite nacionalnost' : 'Select nationality';
+      _isHR ? 'Odaberite državu' : 'Select country';
   String get genderLabel => _isHR ? 'SPOL' : 'GENDER';
   String get male => _isHR ? 'Muško' : 'Male';
   String get female => _isHR ? 'Žensko' : 'Female';
@@ -215,8 +215,9 @@ class AppStrings {
       _isHR ? 'SVI OBJEKTI · NAJBLIŽI PRVI' : 'ALL VENUES · NEAREST FIRST';
   String get language => _isHR ? 'Jezik / Language' : 'Language / Jezik';
   String searchResultsLabel(int count) {
-    if (_isHR)
+    if (_isHR) {
       return '$count ${count == 1 ? 'REZULTAT' : 'REZULTATA'} · SORTIRANO PO UDALJENOSTI';
+    }
     return '$count RESULT${count != 1 ? 'S' : ''} · SORTED BY DISTANCE';
   }
 

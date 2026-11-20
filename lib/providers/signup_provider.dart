@@ -39,9 +39,10 @@ class SignupProvider extends ChangeNotifier {
     required String fullname,
     required String email,
     required String password,
-    required String phoneNumber,
-    required String nationality,
-    required String dateOfBirth,
+    String? phoneNumber,
+    String? nationality,
+    String? dateOfBirth,
+    String? gender,
   }) async {
     _isLoading = true;
     _error = null;
@@ -56,7 +57,7 @@ class SignupProvider extends ChangeNotifier {
         phoneNumber: phoneNumber,
         nationality: nationality,
         dateOfBirth: dateOfBirth,
-        gender: _selectedGender.toLowerCase(),
+        gender: gender ?? (_selectedGender.isNotEmpty ? _selectedGender.toLowerCase() : null),
         uid: uid,
       );
 
